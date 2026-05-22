@@ -2,6 +2,9 @@
 //
 // ClipBrief schema + validator + ID helpers. Pure module, no fs IO.
 
+/** Maximum allowed video duration in seconds. Server-side guard + UI hint. */
+export const MAX_DURATION_SECONDS = 60
+
 export const ASPECT_RATIOS = ['9:16', '16:9', '1:1'] as const
 export const RESOLUTIONS = ['1080p', '720p', '4k'] as const
 export const PUBLISH_PLATFORMS = [
@@ -116,6 +119,8 @@ export function validateClipBrief(
   if (!isEnumValue(PRODUCER_KINDS, r.producerKind)) errors.push(`producerKind: must be one of ${PRODUCER_KINDS.join('|')}`)
   if (typeof r.targetDuration !== 'number' || !Number.isFinite(r.targetDuration) || r.targetDuration <= 0) {
     errors.push('targetDuration: must be positive number')
+  } else if (r.targetDuration > MAX_DURATION_SECONDS) {
+    errors.push(`targetDuration: must be <= ${MAX_DURATION_SECONDS}s`)
   }
   if (typeof r.note !== 'string') errors.push('note: must be string')
   if (typeof r.createdAt !== 'string' || !r.createdAt) errors.push('createdAt: missing or empty')

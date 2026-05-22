@@ -14,6 +14,7 @@
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
     "test": "vitest run --passWithNoTests",
+    "render": "bun run scripts/render.ts",
     "check:secrets": "! grep -rnE '(sk-[A-Za-z0-9]{20,}|sk-proj-)' --include='*.ts' --include='*.tsx' --include='*.js' --include='*.json' --include='*.md' --include='*.yaml' --include='*.yml' --include='.env*' --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist --exclude-dir=.git . | grep -v 'secret-allow:'",
     "check:purity": "! grep -rnE '\\b(episode|shot|series|pipeline)\\b' --include='*.ts' --include='*.tsx' --include='*.md' --exclude-dir=node_modules --exclude-dir=tests --exclude-dir=docs --exclude-dir=.workspace --exclude-dir=.next --exclude-dir=dist . | grep -v 'purity-allow:'",
     "check": "bun run typecheck && bun run lint && bun run check:purity && bun run check:secrets"

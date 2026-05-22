@@ -28,6 +28,7 @@ import {
   PUBLISH_PLATFORMS,
   CAPTION_STYLES,
   STATUSES,
+  MAX_DURATION_SECONDS,
   type ClipBrief,
 } from '@/lib/editor/clip-instance'
 
@@ -119,6 +120,9 @@ export async function PUT(req: NextRequest, ctx: RouteContext) {
   if (body.targetDuration !== undefined) {
     if (typeof body.targetDuration !== 'number' || !Number.isFinite(body.targetDuration) || body.targetDuration <= 0) {
       return sendError(422, 'VALIDATION_INVALID_TARGET_DURATION', 'must be positive number')
+    }
+    if (body.targetDuration > MAX_DURATION_SECONDS) {
+      return sendError(422, 'VALIDATION_DURATION_TOO_LONG', `targetDuration must be <= ${MAX_DURATION_SECONDS}s`)
     }
     next.targetDuration = body.targetDuration
   }

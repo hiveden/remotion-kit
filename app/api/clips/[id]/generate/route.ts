@@ -16,6 +16,7 @@ import {
 } from '@/lib/server/clip-store'
 import { generateClipComposition } from '@/lib/server/clip-generate'
 import { LLMError } from '@/lib/server/llm-client'
+import { MAX_DURATION_SECONDS } from '@/lib/editor/clip-instance'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -49,6 +50,9 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
   }
   if (typeof body.durationSeconds !== 'number' || !Number.isFinite(body.durationSeconds) || body.durationSeconds <= 0) {
     return sendError(422, 'VALIDATION_INVALID_DURATION', 'durationSeconds must be a positive number.')
+  }
+  if (body.durationSeconds > MAX_DURATION_SECONDS) {
+    return sendError(422, 'VALIDATION_DURATION_TOO_LONG', `durationSeconds must be <= ${MAX_DURATION_SECONDS}s.`)
   }
   const cameraHint = typeof body.cameraHint === 'string' ? body.cameraHint : undefined
 

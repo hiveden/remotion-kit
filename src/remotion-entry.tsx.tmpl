@@ -1,0 +1,20 @@
+// AUTO-GENERATED — do not edit.
+// scripts/render.ts substitutes the placeholders below and writes the
+// resolved file to .workspace/.render/<clip-id>.tsx before invoking
+// `npx remotion render`. See README §Render to mp4.
+import React from 'react'
+import { Composition, registerRoot } from 'remotion'
+import Clip from '__CLIP_IMPORT__'
+
+const Root: React.FC = () => (
+  <Composition
+    id="Clip"
+    component={Clip as React.ComponentType<Record<string, never>>}
+    fps={__FPS__}
+    durationInFrames={__DURATION_IN_FRAMES__}
+    width={__WIDTH__}
+    height={__HEIGHT__}
+  />
+)
+
+registerRoot(Root)

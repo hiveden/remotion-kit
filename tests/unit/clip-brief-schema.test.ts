@@ -110,6 +110,22 @@ describe('validateClipBrief', () => {
     expect(r.ok).toBe(false)
   })
 
+  it('targetDuration = 60 (MAX) → ok', () => {
+    const r = validateClipBrief({ ...validBrief(), targetDuration: 60 })
+    expect(r.ok).toBe(true)
+  })
+
+  it('targetDuration = 61 (MAX+1) → 错 (上限 60s)', () => {
+    const r = validateClipBrief({ ...validBrief(), targetDuration: 61 })
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.errors.join(',')).toContain('<= 60s')
+  })
+
+  it('targetDuration = 120 → 错', () => {
+    const r = validateClipBrief({ ...validBrief(), targetDuration: 120 })
+    expect(r.ok).toBe(false)
+  })
+
   it('ok:true 时 value 字段 round-trip 正确', () => {
     const input = {
       ...validBrief(),

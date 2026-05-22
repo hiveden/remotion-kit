@@ -44,6 +44,9 @@ Then, in the browser:
    **Duration (s)** to `5`, and hit **▶ 生成 Composition.tsx**
 5. The Preview pane on the right shows the fading `HELLO` title; if it doesn't,
    hit ↻ **重载**
+6. (Optional) render to mp4: `bun run render <clip-id>` (the id is in the URL,
+   e.g. `untitled-clip-abcd1234`). Output lands at
+   `.workspace/clips/<clip-id>/render/final.mp4`.
 
 What just happened:
 
@@ -71,12 +74,13 @@ More example briefs (vertical product card, data counter, …) live in
 
 | Script | What it does |
 |---|---|
-| `bun run dev` | Start Next.js dev server on port 3200 |
+| `bun run dev` | Start Next.js dev server on port 3200 (`PORT=N` to override) |
 | `bun run build` | Production build |
 | `bun run start` | Run production build |
 | `bun run typecheck` | `tsc --noEmit` |
 | `bun run lint` | `oxlint .` |
 | `bun run test` | `vitest run` |
+| `bun run render <clip-id> [--out path] [--codec h264]` | Render a clip's active Composition.tsx to mp4 |
 | `bun run check:purity` | Fail if business concepts (`episode|shot|series|pipeline`) leak in <!-- purity-allow: documenting the check itself --> |
 | `bun run check:secrets` | Fail if OpenAI keys (`sk-...`) leak in |
 | `bun run check` | All of the above sequentially |
@@ -142,6 +146,56 @@ cd -
 - Two agents starting concurrent `add`s on the same role will collide — coordinate in the thread, or pick distinct feature names.
 - `finish` only succeeds when the branch fast-forwards `main`; otherwise it points you at `update`.
 
+## Render to mp4
+
+```bash
+bun run render <clip-id>                        # → .workspace/clips/<id>/render/final.mp4
+bun run render <clip-id> --out /tmp/out.mp4     # custom output path
+bun run render <clip-id> --codec h264           # h264|h265|vp8|vp9|prores
+```
+
+`scripts/render.ts`:
+
+1. Reads `.workspace/clips/<id>/brief.json` for `aspectRatio` + `targetDuration`
+2. Materializes `src/remotion-entry.tsx.tmpl` (project-level template) with concrete
+   `fps` / `durationInFrames` / `width` / `height` and the absolute path of the clip's
+   `Composition.tsx`, writing the result to `.workspace/.render/<id>.tsx`
+3. Invokes `npx remotion render <entry> Clip <out> --codec=h264 --concurrency=1`
+4. Cleans up the materialized entry on success (kept on failure so you can inspect it)
+
+The renderer reads `brief.json` directly — not the LLM-generated code — so even if the
+LLM ignored the prompt's duration hint, the mp4 is the correct length.
+
+## MOCK_LLM fixture
+
+When `MOCK_LLM=1`, `lib/server/llm-client.ts` skips the network and returns a canned
+response from `tests/__fixtures__/llm/_seed.json`. Matching is against the **full
+assembled `userPrompt`** (built by `clip-generate.ts` — includes the scene prompt
+plus the duration line, optional camera hint, the references block, and the trailing
+`请生成 Composition.tsx:` marker), not the raw scene description.
+
+To add a new fixture entry:
+
+1. Copy a recent take's persisted user prompt from
+   `.workspace/clips/<id>/.meta/last-generate.json` (`userPrompt` field) to find a
+   substring unique to your scene.
+2. Append an entry to `tests/__fixtures__/llm/_seed.json`:
+
+   ```jsonc
+   {
+     "id": "my-scene",
+     "match": { "scenePromptIncludes": "<unique substring>" },
+     "response": {
+       "text": "```tsx\nimport React from 'react'\n...\nexport default Composition\n```",
+       "meta": { "provider": "openai", "model": "gpt-5.5-mock", "usage": { /* ... */ } }
+     }
+   }
+   ```
+
+3. Entries are matched top-down; first match wins. `default` fires when no entry matches.
+4. Re-seed from real LLM output by running once with `MOCK_LLM=0` and copying the saved
+   `rawResponse` from `last-generate.json` (redact any tokens first).
+
 ## Pre-commit hooks
 
 [Lefthook](https://github.com/evilmartians/lefthook) wires the same checks into git so a broken commit can't land on `main`. It installs automatically on `bun install` via the `prepare` script.
@@ -165,10 +219,11 @@ To re-install hooks manually (rarely needed): `bunx lefthook install`.
 
 ## Status
 
-- **T1 (scaffold)** — ✅ this commit
-- **T2 (clip module migration from astral-video)** — in progress
-- **T3 (end-to-end loop validation)** — pending
-- **T4 (LLM integration: OpenAI GPT-5.5 via CPA)** — pending
+- **T1 (scaffold)** — ✅
+- **T2 (clip module migration from astral-video)** — ✅
+- **T3 (end-to-end loop validation)** — ✅ (5 e2e webm + 4 mp4 + 17.8s real-LLM e2e in `.workspace/qa/T3-evidence/`)
+- **T4 (LLM integration: OpenAI GPT-5.5 via CPA)** — ✅
+- **T7 (follow-ups: durationSeconds <= 60s · MOCK_LLM doc · `bun run render`)** — ✅
 
 ## License
 

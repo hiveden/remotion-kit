@@ -1,5 +1,5 @@
 {
-  "$comment": "LLM fixture used when MOCK_LLM=1. Seeded from CPA gpt-5.5 real responses on 2026-05-22; redact and regenerate by running a real prompt with MOCK_LLM unset. Each entry is matched by match.scenePromptIncludes (substring on userPrompt). default fires when no entry matches.",
+  "$comment": "LLM fixture used when MOCK_LLM=1. Seeded from CPA gpt-5.5 real responses on 2026-05-22; redact and regenerate by running a real prompt with MOCK_LLM unset. IMPORTANT: match.scenePromptIncludes is matched against the full `userPrompt` (built by clip-generate.ts buildUserPrompt — includes 'Scene prompt:', the duration line '\\n\\u65f6\\u957f: Xs @ 30fps = ...', optional camera hint, the '\\u98ce\\u683c\\u53c2\\u8003:' (references) block, and the trailing '\\u8bf7\\u751f\\u6210 Composition.tsx:'). NOT the raw user scene description. Inspect `.meta/last-generate.json:userPrompt` of any take to see the real string the matcher receives. To add a new entry: pick a substring unique to your target scene prompt (e.g. 'sunrise zoom-out') so it doesn't false-match the default. Entries are matched top-down; first match wins. `default` fires when no entry matches.",
   "entries": [
     {
       "id": "hello-title",
