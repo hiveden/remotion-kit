@@ -4,23 +4,12 @@ import React from 'react'
 import type { DemoBrandState, DemoBrief } from '@/lib/demo/types'
 import type { AgentDockHandle } from './AgentChatDock'
 import { categorize } from './AgentChatDock'
+import { useStorageProvider } from '@/lib/storage/use-storage-provider'
+import { isStorageError } from '@/lib/storage/types'
 
 export type CompositionSource = { kind: 'static' } | { kind: 'lazy'; clipId: string }
 
-const SESSION_CLIP_ID = 'demo-session'
 const DEMO_DURATION_SECONDS = 14
-
-interface GenerateResponse {
-  ok?: true
-  clipId?: string
-  generatedAt?: string
-  codeLength?: number
-  error?: { code?: string; message?: string; retryable?: boolean; traceId?: string }
-}
-
-interface ClipResponse {
-  clip: { id: string }
-}
 
 interface UseAgentGenerateArgs {
   brand: DemoBrandState
@@ -71,6 +60,7 @@ export function useAgentGenerate({
   dockRef,
   onGenerated,
 }: UseAgentGenerateArgs): UseAgentGenerate {
+  const provider = useStorageProvider()
   const [state, setState] = React.useState<State>({
     source: { kind: 'static' },
     reloadKey: 0,
@@ -78,42 +68,22 @@ export function useAgentGenerate({
     aiGenerated: false,
   })
   const abortRef = React.useRef<AbortController | null>(null)
-  const sessionReadyRef = React.useRef<Promise<string> | null>(null)
   const latestRef = React.useRef({ brand, brief })
   React.useEffect(() => {
     latestRef.current = { brand, brief }
   }, [brand, brief])
 
-  async function ensureSession(signal: AbortSignal): Promise<string> {
-    if (sessionReadyRef.current) return sessionReadyRef.current
-    sessionReadyRef.current = (async () => {
-      // POST is idempotent for fixed `demo-session` id (T20 backend contract).
-      const r = await fetch('/api/clips', {
-        method: 'POST',
-        signal,
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: SESSION_CLIP_ID, name: 'Demo Session' }),
-      })
-      if (!r.ok && r.status !== 409) {
-        const detail = (await r.json().catch(() => ({}))) as GenerateResponse
-        const code = detail.error?.code ?? `HTTP ${r.status}`
-        sessionReadyRef.current = null
-        throw Object.assign(new Error(detail.error?.message ?? 'session ensure failed'), { code })
-      }
-      let data: ClipResponse | null = null
-      try {
-        data = (await r.json()) as ClipResponse
-      } catch {
-        /* 409 may have no body — fall through with fixed id */
-      }
-      return data?.clip?.id ?? SESSION_CLIP_ID
-    })()
-    return sessionReadyRef.current
-  }
-
   async function submit(promptText: string) {
     const dock = dockRef.current
     if (!dock) return
+    if (!provider) {
+      dock.reportError({
+        category: 'SYSTEM',
+        code: 'STORAGE_NOT_READY',
+        message: 'storage provider 还未加载，稍后再试',
+      })
+      return
+    }
     abortRef.current?.abort()
     const ac = new AbortController()
     abortRef.current = ac
@@ -122,29 +92,17 @@ export function useAgentGenerate({
     const snapshot: Snapshot = { source: state.source }
     dock.reportSubmit()
     try {
-      const clipId = await ensureSession(ac.signal)
+      const clipId = await provider.ensureSession(ac.signal)
       dock.reportStreaming()
-      const r = await fetch(`/api/clips/${clipId}/generate`, {
-        method: 'POST',
-        signal: ac.signal,
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
+      const result = await provider.callGenerate(
+        {
           scenePrompt: buildScenePrompt(promptText, latest.brand, latest.brief),
           durationSeconds: DEMO_DURATION_SECONDS,
-        }),
-      })
-      const data = (await r.json().catch(() => ({}))) as GenerateResponse
-      if (!r.ok || !data.ok) {
-        const code = data.error?.code ?? `HTTP ${r.status}`
-        dock.reportError({
-          category: categorize(code),
-          code,
-          message: data.error?.message ?? r.statusText,
-        })
-        return
-      }
+        },
+        ac.signal,
+      )
       const elapsed = (Date.now() - startMs) / 1000
-      const isMock = (data.codeLength ?? 0) > 0 && elapsed < 1.5
+      const isMock = result.codeLength > 0 && elapsed < 1.5
       setState((s) => ({
         source: { kind: 'lazy', clipId },
         reloadKey: s.reloadKey + 1,
@@ -156,6 +114,14 @@ export function useAgentGenerate({
     } catch (e) {
       if (ac.signal.aborted) {
         dock.reportError({ category: 'SYSTEM', code: 'SYSTEM_CANCELLED', message: 'cancelled' })
+        return
+      }
+      if (isStorageError(e)) {
+        dock.reportError({
+          category: categorize(e.code),
+          code: e.code,
+          message: e.message,
+        })
         return
       }
       const err = e as { code?: string; message?: string }

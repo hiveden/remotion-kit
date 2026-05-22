@@ -5,6 +5,7 @@ import { Player } from '@remotion/player'
 import DemoComposition from '@/lib/demo/composition'
 import type { DemoBrandState, DemoBrief } from '@/lib/demo/types'
 import { DEMO_FPS, DEMO_DURATION_FRAMES, DEMO_CANVAS } from '@/lib/demo/defaults'
+import { useStorageProvider } from '@/lib/storage/use-storage-provider'
 import { RandomThemeButton } from './RandomThemeButton'
 
 interface Props {
@@ -61,16 +62,13 @@ class CompositionErrorBoundary extends React.Component<
 
 export function CanvasStage({ brand, brief, onBrandChange, source, reloadKey }: Props) {
   const inputProps = React.useMemo(() => ({ brand, brief }), [brand, brief])
+  const provider = useStorageProvider()
 
   const lazyComponent = React.useMemo(() => {
     if (source.kind === 'static') return undefined
-    const clipId = source.clipId
-    return () =>
-      import(
-        /* webpackInclude: /Composition\.tsx$/ */
-        `@clip-workspace/${clipId}/src/Composition`
-      )
-  }, [source])
+    if (!provider) return undefined
+    return provider.composition(source.clipId)
+  }, [source, provider])
 
   // `key` bump on reloadKey forces React to remount the <Player>, which clears
   // the module cache and re-evaluates lazyComponent.
