@@ -1,0 +1,29 @@
+# hello-fade-in.note
+
+A minimal "hello" title that fades in, holds, then fades out. Use this as a starting
+point for any single-title open / close card. Brief follows the structure the editor
+expects when you paste it into the Note (markdown) field of a new clip.
+
+---
+
+**Target duration:** 5 s
+**Aspect:** 9:16 (vertical short)
+**Camera hint:** static, centered
+
+**Scene prompt (paste into Generate panel)**:
+
+> hello fade-in titled HELLO at center, dark background, 5 seconds @ 30fps
+
+**References** (paste into the References list, one per line):
+
+- bold sans-serif, very large (~220px)
+- pure black background, white text
+- fade in over the first half-second, hold, fade out in the last half-second
+
+**Why this clip works as a hello**
+
+- It uses only `useCurrentFrame` + `interpolate` from Remotion — no extra deps, no
+  external fonts, no image assets. The agent can write it in one shot and you can
+  preview it without any setup beyond `bun run dev`.
+- The output is intentionally boring: if you can render this, the SDK + Player
+  pipeline is healthy. Iterate from here.

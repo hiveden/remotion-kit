@@ -1,0 +1,40 @@
+# product-card-9x16.note
+
+A 6-second vertical product card: name + tagline + accent shape, in the brand palette.
+Vertical (9:16) so it fits social shorts. Copy this brief, change the product name +
+colors, then hit Generate.
+
+---
+
+**Target duration:** 6 s
+**Aspect:** 9:16
+**Camera hint:** subtle slow zoom-in on the title
+
+**Scene prompt (paste into Generate panel)**:
+
+> Centered product card. Big sans-serif product name slides up from y+80px into y=0
+> over the first 20 frames. A one-line tagline fades in 10 frames later. A solid
+> color accent bar (40px tall, half-width) draws in from the left under the tagline
+> at frame 35. Hold from frame 60 to frame 150. Background is a smooth radial
+> gradient from accent color (centered, faded) to near-black at the edges.
+
+**Replace these tokens before generating**:
+
+| Token | Example |
+|---|---|
+| Product name | `Aurora Pen` |
+| Tagline | `One stroke, sixty four colors.` |
+| Accent color | `#7DD3FC` |
+
+**References**:
+
+- product card style, not a hero shot
+- accent color used only for the slim bar (no full backgrounds in accent)
+- tagline font ~3.5x smaller than the product name
+
+**Why this clip works as a template**
+
+- Three element types only (title / tagline / accent) keeps the agent's output
+  short and easy to read.
+- 6 s is long enough to register but short enough that you'll regenerate
+  freely while iterating on the brief.

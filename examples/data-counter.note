@@ -1,0 +1,40 @@
+# data-counter.note
+
+A 4-second counter-up animation: a single big number tweens from 0 → target, with a
+short caption label below it. Useful as a beat inside a longer explainer, or as a
+standalone "metric reveal" card.
+
+---
+
+**Target duration:** 4 s
+**Aspect:** 16:9
+**Camera hint:** none — purely typographic, no parallax
+
+**Scene prompt (paste into Generate panel)**:
+
+> Large numeric counter at center that tweens from 0 to TARGET using
+> `interpolate(frame, [0, 90], [0, TARGET], { extrapolateRight: 'clamp' })`.
+> Below the number, a small caption label fades in by frame 30 and stays until
+> frame 120. Background is a flat dark slate. Number formatted with thousand
+> separators. Use a tabular-nums style so the digits do not jitter as they grow.
+
+**Replace these tokens before generating**:
+
+| Token | Example |
+|---|---|
+| TARGET | `12500` |
+| Caption label | `events processed last hour` |
+
+**References**:
+
+- monospaced or tabular-figure font for the counter (no width-shifting digits)
+- counter occupies ~60% of vertical height
+- caption is one short line, never wraps
+
+**Why this clip works as a template**
+
+- One `interpolate()` call drives the whole composition — the simplest possible
+  agent-generated motion. If a refactor breaks animation handling, this is the
+  first thing to fail.
+- 16:9 + tabular nums + caption is also the canonical "metric beat" shape used
+  in many longer explainers; you can drop the output into a bigger clip later.

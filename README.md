@@ -20,18 +20,47 @@ A focused toolkit for building Remotion clips with a coding agent (Claude Code, 
 
 See [`CLAUDE.md`](./CLAUDE.md) for the full boundaries.
 
-## 30-second hello clip *(placeholder — finalized in T3)*
+## 30-second hello clip
+
+The shortest path from a blank repo to a clip playing in your browser. Works fully
+offline by default (uses the bundled fixture LLM); flip one env var to use a real
+LLM when you want it.
 
 ```bash
 git clone https://github.com/hiveden/remotion-kit.git
 cd remotion-kit
 bun install
 cp .env.example .env.local
-bun run dev
-# open http://localhost:3200/clip
+echo "MOCK_LLM=1" >> .env.local          # offline-safe: use bundled fixture LLM
+bun run dev                              # http://localhost:3200
 ```
 
-Click **+ New clip**, fill in the brief, hit Generate. The agent writes the composition; the preview pane shows it.
+Then, in the browser:
+
+1. Open <http://localhost:3200/clip>
+2. Click **+ New clip**, accept the default name
+3. Open `examples/hello-fade-in.note` in your editor for the brief to paste
+4. In the clip editor, paste the **Scene prompt** into the *Generate panel*, set
+   **Duration (s)** to `5`, and hit **▶ 生成 Composition.tsx**
+5. The Preview pane on the right shows the fading `HELLO` title; if it doesn't,
+   hit ↻ **重载**
+
+What just happened:
+
+- `bun run dev` started Next.js on port 3200
+- Clicking *Generate* called `POST /api/clips/<id>/generate`
+- With `MOCK_LLM=1`, `FixtureLLMClient` returned the seeded "hello-title" response
+  from `tests/__fixtures__/llm/_seed.json` instead of calling a real LLM
+- The agent's response was extracted as a `tsx` code block and written to
+  `.workspace/clips/<id>/src/Composition.tsx`
+- `@remotion/player` mounted that component in the Preview pane
+
+To switch to a real LLM, set `MOCK_LLM=0` in `.env.local`. The default `OPENAI_BASE_URL`
+points at a local CPA proxy (`http://localhost:8317/v1`); override with your own
+OpenAI-compatible endpoint and API key to call anything else.
+
+More example briefs (vertical product card, data counter, …) live in
+[`examples/`](./examples/).
 
 ## Requirements
 
