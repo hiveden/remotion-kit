@@ -97,6 +97,29 @@ export const Send: React.FC<IconProps> = (props) => (
   </svg>
 )
 
+export const Assets: React.FC<IconProps> = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <circle cx="8.5" cy="8.5" r="1.5" />
+    <path d="M21 15l-5-5L5 21" />
+  </svg>
+)
+
+export const Elements: React.FC<IconProps> = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <circle cx="6" cy="6" r="3" />
+    <rect x="14" y="3" width="7" height="7" rx="1" />
+    <path d="M6 14l6 7H0z" />
+    <rect x="14" y="14" width="7" height="7" rx="1" />
+  </svg>
+)
+
+export const Effects: React.FC<IconProps> = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M12 2l2.4 5 5.6.8-4 4 1 5.6L12 14.8 6.9 17.4l1-5.6-4-4L9.5 7z" />
+  </svg>
+)
+
 export const Spinner: React.FC<IconProps> = (props) => (
   <svg
     viewBox="0 0 12 12"

@@ -16,37 +16,64 @@ export function BottomTimeline() {
   const bodyPct = (DEMO_FRAMES.body / DEMO_DURATION_FRAMES) * 100
   const ctaPct = (DEMO_FRAMES.cta / DEMO_DURATION_FRAMES) * 100
   return (
-    <div
-      className="flex h-20 w-full max-w-[480px] flex-col justify-center gap-2 rounded-md border border-border bg-panel px-4 py-3 shadow-panel transition-colors duration-200"
+    <footer
+      className="grid grid-cols-[200px_minmax(0,1fr)_200px] items-center gap-4 border-t border-border bg-panel px-4 shadow-panel transition-colors duration-200"
       data-testid="demo-timeline"
     >
-      <div className="flex h-4 w-full overflow-hidden rounded-sm">
-        <div
-          className="h-full bg-gradient-to-r from-[#A855F7] to-[#9333EA]"
-          style={{ width: `${coverPct}%` }}
-          title={`Cover · ${(DEMO_FRAMES.cover / DEMO_FPS).toFixed(1)}s`}
-          aria-label="Cover segment"
-        />
-        <div
-          className="h-full bg-gradient-to-r from-[#3B82F6] to-[#2563EB]"
-          style={{ width: `${bodyPct}%` }}
-          title={`Body · ${(DEMO_FRAMES.body / DEMO_FPS).toFixed(1)}s`}
-          aria-label="Body segment"
-        />
-        <div
-          className="h-full bg-gradient-to-r from-[#EC4899] to-[#DB2777]"
-          style={{ width: `${ctaPct}%` }}
-          title={`CTA · ${(DEMO_FRAMES.cta / DEMO_FPS).toFixed(1)}s`}
-          aria-label="CTA segment"
-        />
-      </div>
-      <div className="flex items-center justify-between font-mono text-[10px] text-text-lo">
-        <span>0:00</span>
-        <span data-testid="timeline-meta">
+      <div className="flex h-full flex-col justify-center text-[11px] text-text-md">
+        <span className="font-medium text-text-hi">时间轴</span>
+        <span className="mt-0.5 font-mono text-[10px] text-text-lo" data-testid="timeline-meta">
           {TOTAL_SECONDS.toFixed(1)}s · {DEMO_FPS}fps · {DEMO_DURATION_FRAMES}f
         </span>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex h-5 w-full overflow-hidden rounded-sm">
+          <div
+            className="flex h-full items-center justify-center font-mono text-[10px] text-white"
+            style={{
+              width: `${coverPct}%`,
+              background: 'linear-gradient(90deg, #A855F7, #9333EA)',
+            }}
+            title={`Cover · ${(DEMO_FRAMES.cover / DEMO_FPS).toFixed(1)}s`}
+            data-testid="timeline-seg-cover"
+          >
+            Cover {(DEMO_FRAMES.cover / DEMO_FPS).toFixed(1)}s
+          </div>
+          <div
+            className="flex h-full items-center justify-center font-mono text-[10px] text-white"
+            style={{
+              width: `${bodyPct}%`,
+              background: 'linear-gradient(90deg, #3B82F6, #2563EB)',
+            }}
+            title={`Body · ${(DEMO_FRAMES.body / DEMO_FPS).toFixed(1)}s`}
+            data-testid="timeline-seg-body"
+          >
+            Body {(DEMO_FRAMES.body / DEMO_FPS).toFixed(1)}s
+          </div>
+          <div
+            className="flex h-full items-center justify-center font-mono text-[10px] text-white"
+            style={{
+              width: `${ctaPct}%`,
+              background: 'linear-gradient(90deg, #EC4899, #DB2777)',
+            }}
+            title={`CTA · ${(DEMO_FRAMES.cta / DEMO_FPS).toFixed(1)}s`}
+            data-testid="timeline-seg-cta"
+          >
+            CTA {(DEMO_FRAMES.cta / DEMO_FPS).toFixed(1)}s
+          </div>
+        </div>
+        <div className="flex items-center justify-between font-mono text-[10px] text-text-lo">
+          <span>0:00</span>
+          <span>{fmt(TOTAL_SECONDS / 2)}</span>
+          <span>{fmt(TOTAL_SECONDS)}</span>
+        </div>
+      </div>
+      <div className="flex items-center justify-end gap-2 font-mono text-[11px] text-text-md">
+        <span className="text-text-hi">▶</span>
+        <span className="text-text-hi">0:00.0</span>
+        <span className="text-text-lo">/</span>
         <span>{fmt(TOTAL_SECONDS)}</span>
       </div>
-    </div>
+    </footer>
   )
 }

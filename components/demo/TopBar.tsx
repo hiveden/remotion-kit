@@ -3,12 +3,8 @@
 import React from 'react'
 import { Sun, Moon, GitHubMark } from './icons'
 import { useTheme } from './ThemeProvider'
-import { LayoutToggleButton } from './LayoutToggleButton'
-import type { DemoLayout } from '@/lib/demo/types'
 
 interface Props {
-  layout: DemoLayout
-  onLayoutChange: (next: DemoLayout) => void
   templateLabel: string
   aiGenerated: boolean
   onUndo: () => void
@@ -16,7 +12,7 @@ interface Props {
 
 const REPO_URL = 'https://github.com/hiveden/remotion-kit'
 
-export function TopBar({ layout, onLayoutChange, templateLabel, aiGenerated, onUndo }: Props) {
+export function TopBar({ templateLabel, aiGenerated, onUndo }: Props) {
   const { theme, toggle } = useTheme()
   return (
     <header
@@ -71,7 +67,6 @@ export function TopBar({ layout, onLayoutChange, templateLabel, aiGenerated, onU
         >
           {theme === 'light' ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
         </button>
-        <LayoutToggleButton layout={layout} onChange={onLayoutChange} />
         <a
           href={REPO_URL}
           target="_blank"

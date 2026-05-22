@@ -1,11 +1,10 @@
 'use client'
 
 import React from 'react'
-import type { DemoLayout } from '@/lib/demo/types'
 import { Check } from './icons'
 
 interface Props {
-  layout: DemoLayout
+  visible: boolean
 }
 
 const TEMPLATES = [
@@ -17,25 +16,22 @@ const TEMPLATES = [
   { id: 'run', label: 'Run 实测', subtitle: 'v0.3', active: false },
 ] as const
 
-export function LeftSidebar({ layout }: Props) {
-  const wide = layout === 'L0'
+export function LeftSidebar({ visible }: Props) {
   return (
     <aside
-      className="flex h-full flex-col overflow-y-auto border-r border-border bg-panel p-4 transition-[width] duration-300"
+      className={
+        'flex h-full flex-col overflow-y-auto border-r border-border bg-panel p-4 transition-opacity duration-200 ' +
+        (visible ? 'opacity-100' : 'pointer-events-none opacity-0')
+      }
       data-testid="demo-sidebar"
-      data-layout={layout}
+      data-state={visible ? 'open' : 'closed'}
+      aria-hidden={!visible}
     >
       <h2 className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-text-md">
         <span aria-hidden className="h-3.5 w-1 rounded-sm bg-primary" />
         模板
       </h2>
-      <div
-        className={
-          'grid gap-3 transition-[grid-template-columns] duration-300 ' +
-          (wide ? 'grid-cols-2' : 'grid-cols-1')
-        }
-        data-testid="sidebar-templates"
-      >
+      <div className="grid grid-cols-2 gap-3" data-testid="sidebar-templates">
         {TEMPLATES.map((t) => (
           <button
             key={t.id}

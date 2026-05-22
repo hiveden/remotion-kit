@@ -32,10 +32,8 @@ export function RightSidebar({
   const open = layout === 'L1'
   return (
     <aside
-      className={
-        'flex h-full flex-col border-l border-border bg-panel transition-[opacity,transform] duration-300 ' +
-        (open ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-4 opacity-0')
-      }
+      className="flex h-full flex-col overflow-hidden border-l border-border bg-panel transition-[opacity] duration-300"
+      style={{ opacity: open ? 1 : 0 }}
       data-testid="demo-rightside"
       data-state={open ? 'open' : 'closed'}
       aria-hidden={!open}

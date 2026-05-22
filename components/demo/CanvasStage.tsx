@@ -6,7 +6,6 @@ import DemoComposition from '@/lib/demo/composition'
 import type { DemoBrandState, DemoBrief } from '@/lib/demo/types'
 import { DEMO_FPS, DEMO_DURATION_FRAMES, DEMO_CANVAS } from '@/lib/demo/defaults'
 import { RandomThemeButton } from './RandomThemeButton'
-import { BottomTimeline } from './BottomTimeline'
 
 interface Props {
   brand: DemoBrandState
@@ -139,8 +138,6 @@ export function CanvasStage({ brand, brief, onBrandChange, source, reloadKey }: 
       </div>
 
       <RandomThemeButton brand={brand} onChange={onBrandChange} />
-
-      <BottomTimeline />
     </main>
   )
 }
