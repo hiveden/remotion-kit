@@ -2,22 +2,23 @@
 # Worktree workflow helper for remotion-kit multi-agent collaboration.
 #
 #   ./scripts/worktree.sh add <role> [feature-name]
-#   ./scripts/worktree.sh remove <role>
+#   ./scripts/worktree.sh update <role>   # rebase feature on top of origin/main + run checks
 #   ./scripts/worktree.sh finish <role>   # fast-merge to main + push + remove
+#   ./scripts/worktree.sh remove <role>
 #   ./scripts/worktree.sh list
 #
-# Roles: architect | backend | frontend | qa  (enforces stable port allocation)
+# Roles: architect | backend | frontend | qa | devops
 #
 # Path:   ~/projects/remotion-kit.<role>/
 # Branch: <role>/<feature-name>  (feature-name defaults to "work")
-# Port:   3200 (main) | 3201 (backend) | 3202 (frontend) | 3203 (qa)
-#         architect uses main worktree's 3200 by convention
+# Port:   3200 (main / architect) | 3201 (backend) | 3202 (frontend)
+#         3203 (qa) | 3204 (devops)
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PARENT_DIR="$(dirname "$REPO_ROOT")"
-VALID_ROLES=(architect backend frontend qa)
+VALID_ROLES=(architect backend frontend qa devops)
 
 err() { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 info() { printf '\033[36m→\033[0m %s\n' "$*"; }
@@ -59,10 +60,11 @@ cmd_add() {
   echo "Next:"
   echo "  cd $path"
   case "$role" in
-    backend)  echo "  PORT=3201 bun run dev   # if you need a dev server" ;;
-    frontend) echo "  PORT=3202 bun run dev" ;;
-    qa)       echo "  PORT=3203 bun run dev   # or start a separate one for Playwright" ;;
+    backend)   echo "  PORT=3201 bun run dev   # if you need a dev server" ;;
+    frontend)  echo "  PORT=3202 bun run dev" ;;
+    qa)        echo "  PORT=3203 bun run dev   # or start a separate one for Playwright" ;;
     architect) echo "  PORT=3200 bun run dev   # main port; coordinate if main worktree also runs dev" ;;
+    devops)    echo "  PORT=3204 bun run dev   # rarely needed; usually no server" ;;
   esac
   echo "  ... do your work, commit on $branch ..."
   echo "  $REPO_ROOT/scripts/worktree.sh finish $role   # when ready to merge"
@@ -89,6 +91,33 @@ cmd_remove() {
   ok "removed"
 }
 
+cmd_update() {
+  local role="${1:-}"; require_role "$role"
+  local path; path="$(worktree_path "$role")"
+
+  [[ ! -e "$path" ]] && err "no worktree at $path"
+  if ! git -C "$path" diff --quiet || ! git -C "$path" diff --cached --quiet; then
+    err "worktree $path has uncommitted changes — commit or stash first"
+  fi
+
+  local branch
+  branch="$(git -C "$path" symbolic-ref --short HEAD 2>/dev/null || echo "")"
+  [[ -z "$branch" || "$branch" == "main" ]] && err "worktree on detached HEAD or main — nothing to update"
+
+  info "fetching origin/main"
+  git -C "$path" fetch origin main
+
+  info "rebasing $branch onto origin/main"
+  if ! git -C "$path" rebase origin/main; then
+    err "rebase has conflicts — resolve in $path, run 'git rebase --continue', then retry finish"
+  fi
+
+  info "running checks in worktree"
+  (cd "$path" && bun run typecheck && bun run lint && bun run check:purity && bun run check:secrets)
+
+  ok "updated — $branch is now on top of origin/main and checks pass"
+}
+
 cmd_finish() {
   local role="${1:-}"; require_role "$role"
   local path; path="$(worktree_path "$role")"
@@ -104,10 +133,22 @@ cmd_finish() {
   branch="$(git -C "$path" symbolic-ref --short HEAD)"
   [[ -z "$branch" || "$branch" == "main" ]] && err "worktree on detached HEAD or main — nothing to finish"
 
+  # Check if main has advanced beyond our branch's fork point
+  info "fetching origin/main"
+  git -C "$REPO_ROOT" fetch origin main
+  local merge_base origin_main
+  merge_base="$(git -C "$REPO_ROOT" merge-base "$branch" origin/main)"
+  origin_main="$(git -C "$REPO_ROOT" rev-parse origin/main)"
+  if [[ "$merge_base" != "$origin_main" ]]; then
+    err "origin/main has moved on since $branch branched.
+       Run:  ./scripts/worktree.sh update $role
+       (rebases $branch onto origin/main and re-runs checks)
+       Then retry: ./scripts/worktree.sh finish $role"
+  fi
+
   info "fast-merging $branch into main"
   (
     cd "$REPO_ROOT"
-    git fetch origin main
     git checkout main
     git pull --ff-only origin main
     git merge --ff-only "$branch"
@@ -128,11 +169,12 @@ cmd_list() {
 cmd="${1:-}"; shift || true
 case "$cmd" in
   add)    cmd_add "$@" ;;
-  remove) cmd_remove "$@" ;;
+  update) cmd_update "$@" ;;
   finish) cmd_finish "$@" ;;
+  remove) cmd_remove "$@" ;;
   list)   cmd_list ;;
   ""|-h|--help)
-    sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
     ;;
-  *) err "unknown command '$cmd' (expected: add | remove | finish | list)" ;;
+  *) err "unknown command '$cmd' (expected: add | update | finish | remove | list)" ;;
 esac

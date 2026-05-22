@@ -54,7 +54,7 @@ Click **+ New clip**, fill in the brief, hit Generate. The agent writes the comp
 
 ## Worktree workflow
 
-Multiple agents can collaborate on this repo without git's working tree getting in the way. Each agent (`architect` / `backend` / `frontend` / `qa`) works in its own `git worktree` so `HEAD`, the working tree, and the dev server port are physically isolated.
+Multiple agents can collaborate on this repo without git's working tree getting in the way. Each agent (`architect` / `backend` / `frontend` / `qa` / `devops`) works in its own `git worktree` so `HEAD`, the working tree, and the dev server port are physically isolated.
 
 ### Ports
 
@@ -65,6 +65,7 @@ Multiple agents can collaborate on this repo without git's working tree getting 
 | backend | 3201 | `~/projects/remotion-kit.backend` |
 | frontend | 3202 | `~/projects/remotion-kit.frontend` |
 | qa | 3203 | `~/projects/remotion-kit.qa` |
+| devops | 3204 (rarely needed; usually no dev server) | `~/projects/remotion-kit.devops` |
 
 Start dev servers explicitly with `PORT=<n> bun run dev` — no worktree starts one automatically.
 
@@ -72,6 +73,7 @@ Start dev servers explicitly with `PORT=<n> bun run dev` — no worktree starts 
 
 ```bash
 ./scripts/worktree.sh add <role> [feature-name]   # create worktree + branch + bun install
+./scripts/worktree.sh update <role>               # rebase feature on origin/main + re-run checks
 ./scripts/worktree.sh finish <role>               # fast-merge to main, push, cleanup
 ./scripts/worktree.sh remove <role>               # cleanup without merging
 ./scripts/worktree.sh list                        # show current worktrees
@@ -94,11 +96,22 @@ cd -
 ./scripts/worktree.sh finish backend
 ```
 
+### When two agents merge in sequence
+
+`finish` requires the feature branch to be a direct descendant of `origin/main`. If another agent already merged after you `add`ed your worktree, run:
+
+```bash
+./scripts/worktree.sh update <role>   # rebase + re-run checks in your worktree
+./scripts/worktree.sh finish <role>   # retry
+```
+
+`update` rebases your feature branch onto the latest `origin/main` and re-runs `typecheck` / `lint` / `check:purity` / `check:secrets` in your worktree. If the rebase has conflicts, resolve them in the worktree (`git rebase --continue`), then retry `finish`. `finish` will bail with a clear message instead of leaving `main` in a half-merged state.
+
 ### Conflict avoidance
 
 - **Never `git checkout`** in the main worktree while another agent is committing — that's exactly what we set up worktrees to avoid. The main worktree should stay on `main`, used only for `finish`.
 - Two agents starting concurrent `add`s on the same role will collide — coordinate in the thread, or pick distinct feature names.
-- A `finish` is the only operation that touches `main` directly. If two agents `finish` at the same time and the push gets rejected (non-fast-forward), pull and retry.
+- `finish` only succeeds when the branch fast-forwards `main`; otherwise it points you at `update`.
 
 ## Pre-commit hooks
 
