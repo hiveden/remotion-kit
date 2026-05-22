@@ -1,0 +1,315 @@
+openapi: 3.1.0
+info:
+  title: remotion-kit API
+  version: 0.0.0
+  description: |
+    HTTP API for `@hiveden/remotion-kit` Next.js app.
+    Schema-first single source of truth. Frontend consumes via openapi-typescript codegen.
+
+    Status: skeleton. Filled in during T2 (clip module migration) + T4 (LLM integration).
+
+servers:
+  - url: http://127.0.0.1:3200
+    description: local dev (bun run dev)
+
+tags:
+  - name: clips
+    description: Clip CRUD + brief management
+  - name: generate
+    description: LLM-driven Composition.tsx generation
+
+paths:
+  /api/clips:
+    get:
+      tags: [clips]
+      summary: List clips
+      parameters:
+        - name: include
+          in: query
+          schema: { type: string, enum: [archived, all] }
+          description: Include archived clips
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clips:
+                    type: array
+                    items: { $ref: '#/components/schemas/ClipBrief' }
+                required: [clips]
+    post:
+      tags: [clips]
+      summary: Create clip
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, description: 'Display name. Empty → "Untitled clip".' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clip: { $ref: '#/components/schemas/ClipBrief' }
+                required: [clip]
+        '409':
+          description: ID conflict
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/clips/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ClipId'
+    get:
+      tags: [clips]
+      summary: Get clip brief
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clip: { $ref: '#/components/schemas/ClipBrief' }
+                required: [clip]
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    put:
+      tags: [clips]
+      summary: Replace clip brief
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClipBrief' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clip: { $ref: '#/components/schemas/ClipBrief' }
+                required: [clip]
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/clips/{id}/generate:
+    parameters:
+      - $ref: '#/components/parameters/ClipId'
+    post:
+      tags: [generate]
+      summary: Generate Composition.tsx via LLM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scenePrompt, durationSeconds]
+              properties:
+                scenePrompt: { type: string, minLength: 1 }
+                durationSeconds: { type: number, exclusiveMinimum: 0 }
+                cameraHint: { type: string }
+      responses:
+        '200':
+          description: Generated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, clipId, generatedAt, codeLength]
+                properties:
+                  ok: { type: boolean, enum: [true] }
+                  clipId: { type: string }
+                  generatedAt: { type: string, format: date-time }
+                  codeLength: { type: integer }
+        '422':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '500':
+          description: Generate failed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/clips/{id}/record:
+    parameters:
+      - $ref: '#/components/parameters/ClipId'
+    get:
+      tags: [generate]
+      summary: Get last generate record (LLM debug / take history)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [source]
+                properties:
+                  source:
+                    type: string
+                    enum: [persisted, best-effort, none]
+                    description: |
+                      `persisted` = read from `.meta/last-generate.json`.
+                      `best-effort` = reconstructed from takes/.
+                      `none` = no generate yet.
+                  record:
+                    oneOf:
+                      - { $ref: '#/components/schemas/GenerateRecord' }
+                      - { type: 'null' }
+
+components:
+  parameters:
+    ClipId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[a-z0-9-]+$' }
+
+  schemas:
+    ClipBrief:
+      type: object
+      required:
+        - id
+        - name
+        - status
+        - producerKind
+        - brandRef
+        - aspectRatio
+        - resolution
+        - publishPlatform
+        - captionStyle
+        - targetDuration
+        - references
+        - note
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [draft, archived] }
+        producerKind: { type: string, enum: [remotion, image-to-video] }
+        brandRef:
+          oneOf:
+            - { type: string }
+            - { type: 'null' }
+        aspectRatio: { type: string, enum: ['9:16', '16:9', '1:1'] }
+        resolution: { type: string, enum: [1080p, 720p, 4k] }
+        publishPlatform: { type: string, enum: [youtube, douyin, bilibili, xiaohongshu, generic] }
+        captionStyle: { type: string, enum: [subtle, bold, kinetic] }
+        targetDuration: { type: number, exclusiveMinimum: 0 }
+        references:
+          type: array
+          description: |
+            Free-form text references for LLM style context.
+            T2 simplification: was `Array<{templateId, note?, addedAt}>`, now `string[]`.
+            Each item = URL or freeform style hint.
+          items: { type: string, minLength: 1 }
+        note: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    GenerateRecord:
+      type: object
+      description: Per-clip last generation metadata, persisted at `.meta/last-generate.json`.
+      properties:
+        schemaVersion: { type: integer, enum: [1] }
+        clipId: { type: string }
+        clipName: { type: string }
+        scenePrompt: { type: string }
+        durationSeconds: { type: number }
+        cameraHint:
+          oneOf:
+            - { type: string }
+            - { type: 'null' }
+        references:
+          type: array
+          items: { type: string }
+        brand:
+          type: object
+          properties:
+            ref:
+              oneOf:
+                - { type: string }
+                - { type: 'null' }
+        composition:
+          type: object
+          properties:
+            aspectRatio: { type: string }
+            resolution: { type: string }
+            publishPlatform: { type: string }
+            captionStyle: { type: string }
+        llm:
+          type: object
+          properties:
+            provider: { type: string, enum: [openai] }
+            model: { type: string }
+            usage:
+              oneOf:
+                - { type: object, additionalProperties: true }
+                - { type: 'null' }
+        systemPrompt: { type: string }
+        userPrompt: { type: string }
+        rawResponse:
+          oneOf:
+            - { type: string }
+            - { type: 'null' }
+        codeLength: { type: integer }
+        durationMs: { type: integer }
+        generatedAt: { type: string, format: date-time }
+        errorCode:
+          oneOf:
+            - { type: string }
+            - { type: 'null' }
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: |
+                Domain-prefixed code. T4 upgrades route.ts heuristic codes to:
+                AUTH_API_KEY_INVALID / QUOTA_EXCEEDED /
+                SYSTEM_NETWORK / SYSTEM_MODEL_NOT_FOUND / SYSTEM_UNKNOWN /
+                VALIDATION_CONTENT_FILTERED / VALIDATION_MAX_TOKENS_EXCEEDED /
+                VALIDATION_FAILED / VALIDATION_INVALID_IMPORT /
+                NOT_FOUND / ID_CONFLICT
+            message: { type: string, description: 'Safe message — backend sanitized, frontend may display directly except AUTH_* (frontend redacts).' }
+            retryable:
+              type: boolean
+              description: 'Whether client should offer a retry button. Default false if omitted.'
+            trace_id:
+              type: string
+              description: 'Optional. For support correlation.'
