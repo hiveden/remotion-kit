@@ -6,6 +6,7 @@
       "name": "@hiveden/remotion-kit",
       "dependencies": {
         "@remotion/cli": "4.0.438",
+        "@remotion/layout-utils": "^4.0.464",
         "@remotion/player": "4.0.438",
         "next": "16.0.0-beta.0",
         "openai": "^5.0.0",
@@ -245,6 +246,8 @@
     "@remotion/compositor-linux-x64-musl": ["@remotion/compositor-linux-x64-musl@4.0.438", "", { "os": "linux", "cpu": "x64" }, "sha512-qOmPquSwDTcP8JkdjbLdnbjZv+5BLRSo3BOqIGIcA5MBPOs2fZGM4MAFtO1Cd7IP6M2rzwawcVzplHbWUjn9FA=="],
 
     "@remotion/compositor-win32-x64-msvc": ["@remotion/compositor-win32-x64-msvc@4.0.438", "", { "os": "win32", "cpu": "x64" }, "sha512-uso+PNYVQax2wZekkDsfPQrrRT35wySGf6sC2CbQXiwBeHAtsksZZlPpM/N00Rg227ew9jVit7pevdxwt7AD6A=="],
+
+    "@remotion/layout-utils": ["@remotion/layout-utils@4.0.464", "", {}, "sha512-N8hFaWZQMJCGt77+pf1bKYVKWQg1E+4K7K3EiWvvUSyx5FJtF//1yPtA6Mpn4EGrNSi67Yn0P+DQ1h72IOB3tQ=="],
 
     "@remotion/licensing": ["@remotion/licensing@4.0.438", "", {}, "sha512-JYg8ebbVkDJDnKt0BZV7OEptAysKkIWTdRPVGdwPeNw6CMcCooPPDuR7gGHjPtm0Odn/A3EKUopCX3kTvyWTPQ=="],
 
