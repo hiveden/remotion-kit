@@ -17,7 +17,7 @@ export function BottomTimeline() {
   const ctaPct = (DEMO_FRAMES.cta / DEMO_DURATION_FRAMES) * 100
   return (
     <footer
-      className="grid grid-cols-[200px_minmax(0,1fr)_200px] items-center gap-4 border-t border-border bg-panel px-4 shadow-panel transition-colors duration-200"
+      className="grid grid-cols-[160px_minmax(0,1fr)_160px] items-center gap-4 border-t border-border bg-panel px-4 shadow-panel transition-colors duration-200"
       data-testid="demo-timeline"
     >
       <div className="flex h-full flex-col justify-center text-[11px] text-text-md">

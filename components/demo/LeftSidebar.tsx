@@ -28,7 +28,7 @@ export function LeftSidebar({ visible }: Props) {
       aria-hidden={!visible}
     >
       <h2 className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-text-md">
-        <span aria-hidden className="h-3.5 w-1 rounded-sm bg-primary" />
+        <span aria-hidden className="h-4 w-1 rounded-sm bg-primary" />
         模板
       </h2>
       <div className="grid grid-cols-2 gap-3" data-testid="sidebar-templates">
@@ -41,13 +41,13 @@ export function LeftSidebar({ visible }: Props) {
             className={
               'group relative flex flex-col gap-1.5 rounded-md border p-1.5 text-left transition-all duration-150 ' +
               (t.active
-                ? 'cursor-pointer border-primary bg-panel shadow-panel'
+                ? 'cursor-pointer border-primary bg-[color:rgba(168,85,247,0.04)] shadow-panel ring-2 ring-[color:rgba(168,85,247,0.25)]'
                 : 'pointer-events-none cursor-default select-none border-dashed border-border bg-panel opacity-60')
             }
             data-testid={`template-card-${t.id}`}
             data-state={t.active ? 'active' : 'placeholder'}
           >
-            <div className="relative aspect-[9/16] w-full overflow-hidden rounded bg-canvas shadow-panel">
+            <div className="relative aspect-[9/12] w-full overflow-hidden rounded bg-canvas shadow-panel">
               {t.active ? (
                 <div
                   className="grid h-full w-full place-items-center bg-gradient-to-br from-[#1A0E22] via-[#160a1e] to-[#0E0E12] font-mono text-[10px] text-text-md"

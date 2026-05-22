@@ -81,14 +81,14 @@ export function ParamSection({
   const [open, setOpen] = React.useState(defaultOpen)
   return (
     <section
-      className="border-b border-border-soft last:border-b-0"
+      className="border-b border-border last:border-b-0"
       data-testid={`param-section-${scope}`}
       data-state={open ? 'expanded' : 'collapsed'}
     >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 w-full cursor-pointer items-center gap-2 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-text-md transition-colors hover:bg-input hover:text-text-hi"
+        className="flex h-9 w-full cursor-pointer items-center gap-2 bg-surface px-4 text-left text-[11px] font-medium uppercase tracking-wider text-text-md transition-colors hover:bg-input hover:text-text-hi"
         aria-expanded={open}
         data-testid={`param-section-${scope}-summary`}
       >

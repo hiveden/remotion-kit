@@ -76,7 +76,7 @@ export function CanvasStage({ brand, brief, onBrandChange, source, reloadKey }: 
 
   return (
     <main
-      className="flex h-full w-full flex-col items-center justify-center gap-4 overflow-hidden bg-canvas-surround p-6 transition-colors duration-200"
+      className="flex h-full w-full flex-col items-center justify-center gap-6 overflow-hidden bg-canvas-surround p-6 transition-colors duration-200"
       data-testid="demo-stage"
     >
       <div

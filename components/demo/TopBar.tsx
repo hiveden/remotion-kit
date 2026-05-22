@@ -31,7 +31,7 @@ export function TopBar({ templateLabel, aiGenerated, onUndo }: Props) {
 
       <div className="flex flex-1 items-center gap-2">
         <span
-          className="rounded-full border border-[color:rgba(168,85,247,0.35)] bg-[color:rgba(168,85,247,0.12)] px-3 py-1 font-mono text-[11px] text-primary"
+          className="rounded border border-border bg-input px-2 py-0.5 font-mono text-[11px] text-text-md"
           data-testid="topbar-current-template"
         >
           当前模板：<span className="text-text-hi">{templateLabel}</span>

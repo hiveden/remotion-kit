@@ -51,7 +51,7 @@ export function LeftRail({ mode, onChange }: Props) {
             aria-label={item.label + (disabled ? '（即将推出）' : '')}
             title={disabled ? `${item.label}（即将推出）` : item.label}
             className={
-              'relative mx-2 flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-md transition-colors duration-150 ' +
+              'relative mx-2 flex h-12 w-12 flex-col items-center justify-center gap-1 rounded-md transition-colors duration-150 ' +
               (disabled
                 ? 'cursor-not-allowed text-text-lo opacity-50'
                 : active
@@ -66,11 +66,11 @@ export function LeftRail({ mode, onChange }: Props) {
             {active && (
               <span
                 aria-hidden
-                className="absolute -left-2 top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-r bg-primary"
+                className="absolute -left-2 top-1/2 h-8 w-[3px] -translate-y-1/2 rounded-r bg-primary"
               />
             )}
             <item.Icon className="h-5 w-5" />
-            <span className="text-[9px]">{item.label}</span>
+            <span className="text-[10px]">{item.label}</span>
           </button>
         )
       })}
