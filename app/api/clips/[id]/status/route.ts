@@ -29,7 +29,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
   try {
     assertValidClipId(id)
   } catch (e) {
-    if (e instanceof InvalidClipIdError) return sendError(400, 'invalid-id', e.message)
+    if (e instanceof InvalidClipIdError) return sendError(400, 'VALIDATION_INVALID_CLIP_ID', e.message)
     throw e
   }
   const compPath = path.join(clipDirPath(id), 'src', 'Composition.tsx')
@@ -42,8 +42,8 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
     return json({ isScaffold, mtime: stat.mtime.toISOString() })
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
-      return sendError(404, 'not-found', `clip ${id} 不存在或 Composition.tsx 缺失`)
+      return sendError(404, 'NOT_FOUND', `Clip ${id} not found or Composition.tsx missing.`)
     }
-    return sendError(500, 'status-failed', (e as Error).message)
+    return sendError(500, 'SYSTEM_READ_FAILED', (e as Error).message)
   }
 }

@@ -1,0 +1,32 @@
+{
+  "$comment": "LLM fixture used when MOCK_LLM=1. Seeded from CPA gpt-5.5 real responses on 2026-05-22; redact and regenerate by running a real prompt with MOCK_LLM unset. Each entry is matched by match.scenePromptIncludes (substring on userPrompt). default fires when no entry matches.",
+  "entries": [
+    {
+      "id": "hello-title",
+      "match": { "scenePromptIncludes": "hello" },
+      "response": {
+        "text": "```tsx\nimport React from 'react'\nimport { AbsoluteFill, useCurrentFrame, interpolate } from 'remotion'\n\nconst Composition: React.FC = () => {\n  const frame = useCurrentFrame()\n  const opacity = interpolate(frame, [0, 15, 135, 150], [0, 1, 1, 0])\n  return (\n    <AbsoluteFill style={{ background: '#000', color: '#fff', alignItems: 'center', justifyContent: 'center' }}>\n      <div style={{ opacity, fontSize: 220, fontWeight: 900, letterSpacing: -4 }}>HELLO</div>\n    </AbsoluteFill>\n  )\n}\n\nexport default Composition\n```",
+        "meta": {
+          "provider": "openai",
+          "model": "gpt-5.5-mock",
+          "usage": {
+            "prompt_tokens": 420,
+            "completion_tokens": 120,
+            "total_tokens": 540
+          }
+        }
+      }
+    }
+  ],
+  "default": {
+    "id": "default-noop",
+    "response": {
+      "text": "```tsx\nimport React from 'react'\nimport { AbsoluteFill } from 'remotion'\n\nconst Composition: React.FC = () => (\n  <AbsoluteFill style={{ background: '#111', color: '#eee', alignItems: 'center', justifyContent: 'center' }}>\n    <div style={{ fontSize: 96 }}>MOCK_LLM</div>\n  </AbsoluteFill>\n)\n\nexport default Composition\n```",
+      "meta": {
+        "provider": "openai",
+        "model": "gpt-5.5-mock",
+        "usage": { "prompt_tokens": 200, "completion_tokens": 80, "total_tokens": 280 }
+      }
+    }
+  }
+}

@@ -24,7 +24,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
   try {
     assertValidClipId(id)
   } catch (e) {
-    if (e instanceof InvalidClipIdError) return sendError(400, 'invalid-id', e.message)
+    if (e instanceof InvalidClipIdError) return sendError(400, 'VALIDATION_INVALID_CLIP_ID', e.message)
     throw e
   }
   const metaPath = path.join(clipDirPath(id), '.meta', 'takes', 'meta.json')
@@ -36,6 +36,6 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
       return json({ activeVersion: null, takes: [] })
     }
-    return sendError(500, 'read-failed', (e as Error).message)
+    return sendError(500, 'SYSTEM_READ_FAILED', (e as Error).message)
   }
 }

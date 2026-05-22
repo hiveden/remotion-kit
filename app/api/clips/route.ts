@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json()
   } catch {
-    return sendError(400, 'invalid-json', 'request body is not valid JSON')
+    return sendError(400, 'VALIDATION_INVALID_JSON', 'Request body is not valid JSON.')
   }
   const rawName = typeof body.name === 'string' ? body.name.trim() : ''
   const name = rawName || 'Untitled clip'
@@ -59,10 +59,10 @@ export async function POST(req: NextRequest) {
     await scaffoldClipDir(brief)
   } catch (e) {
     if (e instanceof ClipConflictError) {
-      return sendError(409, 'id-conflict', `clip id already exists: ${id}`)
+      return sendError(409, 'CONFLICT_ID', `Clip id already exists: ${id}`)
     }
     if (e instanceof ClipValidationError) {
-      return sendError(422, 'validation-failed', e.errors.join('; '))
+      return sendError(422, 'VALIDATION_FAILED', e.errors.join('; '))
     }
     throw e
   }

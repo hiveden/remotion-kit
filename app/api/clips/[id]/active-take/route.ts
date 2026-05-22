@@ -46,17 +46,17 @@ export async function PUT(req: NextRequest, ctx: RouteContext) {
   try {
     assertValidClipId(id)
   } catch (e) {
-    if (e instanceof InvalidClipIdError) return sendError(400, 'invalid-id', e.message)
+    if (e instanceof InvalidClipIdError) return sendError(400, 'VALIDATION_INVALID_CLIP_ID', e.message)
     throw e
   }
   let body: Body
   try {
     body = await req.json()
   } catch {
-    return sendError(400, 'invalid-json', 'body 不是合法 JSON')
+    return sendError(400, 'VALIDATION_INVALID_JSON', 'Request body is not valid JSON.')
   }
   if (typeof body.version !== 'string' || !/^v\d+$/.test(body.version)) {
-    return sendError(422, 'invalid-version', 'version 必须为 vN 格式（如 v1, v2）')
+    return sendError(422, 'VALIDATION_INVALID_VERSION', 'version must match vN format (e.g. v1, v2).')
   }
   const target = body.version
   const metaPath = path.join(clipDirPath(id), '.meta', 'takes', 'meta.json')
@@ -66,13 +66,13 @@ export async function PUT(req: NextRequest, ctx: RouteContext) {
     meta = JSON.parse(buf) as TakeMeta
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
-      return sendError(404, 'no-takes', '该 clip 没有 take 历史')
+      return sendError(404, 'NOT_FOUND', `Clip ${id} has no take history.`)
     }
-    return sendError(500, 'read-failed', (e as Error).message)
+    return sendError(500, 'SYSTEM_READ_FAILED', (e as Error).message)
   }
   const entry = meta.takes.find((t) => t.version === target)
   if (!entry) {
-    return sendError(404, 'version-not-found', `version ${target} 不在 takes 列表中`)
+    return sendError(404, 'NOT_FOUND', `Version ${target} not in takes list.`)
   }
   const ts = tsForFilename(entry.generatedAt)
   const tsxSrc = path.join(clipDirPath(id), '.meta', 'takes', `${target}-${ts}.tsx`)
@@ -98,6 +98,6 @@ export async function PUT(req: NextRequest, ctx: RouteContext) {
     await fs.writeFile(metaPath, JSON.stringify(meta, null, 2), 'utf8')
     return json({ ok: true, activeVersion: target })
   } catch (e) {
-    return sendError(500, 'switch-failed', (e as Error).message)
+    return sendError(500, 'SYSTEM_WRITE_FAILED', (e as Error).message)
   }
 }

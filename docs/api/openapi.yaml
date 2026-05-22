@@ -300,16 +300,55 @@ components:
             code:
               type: string
               description: |
-                Domain-prefixed code. T4 upgrades route.ts heuristic codes to:
-                AUTH_API_KEY_INVALID / QUOTA_EXCEEDED /
-                SYSTEM_NETWORK / SYSTEM_MODEL_NOT_FOUND / SYSTEM_UNKNOWN /
-                VALIDATION_CONTENT_FILTERED / VALIDATION_MAX_TOKENS_EXCEEDED /
-                VALIDATION_FAILED / VALIDATION_INVALID_IMPORT /
-                NOT_FOUND / ID_CONFLICT
-            message: { type: string, description: 'Safe message — backend sanitized, frontend may display directly except AUTH_* (frontend redacts).' }
+                Domain-prefixed error code. Frontend can render `${code}: ${message}`
+                directly except for AUTH_* (redact message, show generic config hint).
+              enum:
+                # AUTH_*  (HTTP 401/403) — gateway / key / permission
+                - AUTH_API_KEY_INVALID
+                - AUTH_FORBIDDEN
+                # QUOTA_* (HTTP 429) — rate limit, monthly quota
+                - QUOTA_EXCEEDED
+                # SYSTEM_* (HTTP 5xx) — infra / network / model availability
+                - SYSTEM_NETWORK
+                - SYSTEM_MODEL_NOT_FOUND
+                - SYSTEM_READ_FAILED
+                - SYSTEM_WRITE_FAILED
+                - SYSTEM_FIXTURE_MISSING
+                - SYSTEM_FIXTURE_INVALID
+                - SYSTEM_FIXTURE_NO_MATCH
+                - SYSTEM_UNKNOWN
+                # VALIDATION_* (HTTP 4xx) — input / LLM output validation
+                - VALIDATION_INVALID_JSON
+                - VALIDATION_INVALID_CLIP_ID
+                - VALIDATION_INVALID_SCENE_PROMPT
+                - VALIDATION_INVALID_DURATION
+                - VALIDATION_INVALID_NAME
+                - VALIDATION_INVALID_BRAND_REF
+                - VALIDATION_INVALID_ASPECT_RATIO
+                - VALIDATION_INVALID_RESOLUTION
+                - VALIDATION_INVALID_PUBLISH_PLATFORM
+                - VALIDATION_INVALID_CAPTION_STYLE
+                - VALIDATION_INVALID_TARGET_DURATION
+                - VALIDATION_INVALID_NOTE
+                - VALIDATION_INVALID_STATUS
+                - VALIDATION_INVALID_VERSION
+                - VALIDATION_FAILED
+                - VALIDATION_BAD_REQUEST
+                - VALIDATION_CONTENT_FILTERED
+                - VALIDATION_MAX_TOKENS_EXCEEDED
+                - VALIDATION_EMPTY_RESPONSE
+                - VALIDATION_NO_CODE_BLOCK
+                - VALIDATION_INVALID_IMPORT
+                - VALIDATION_INVALID_SYNTAX
+                # Generic
+                - NOT_FOUND
+                - CONFLICT_ID
+            message:
+              type: string
+              description: 'Safe message — backend sanitizes before sending. Frontend may display directly except for AUTH_* (redact).'
             retryable:
               type: boolean
-              description: 'Whether client should offer a retry button. Default false if omitted.'
+              description: 'When true, client should offer a retry action (e.g. inline "Try again" button). Defaults to false if omitted.'
             trace_id:
               type: string
               description: 'Optional. For support correlation.'

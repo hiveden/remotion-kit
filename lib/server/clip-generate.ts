@@ -10,8 +10,8 @@ import 'server-only'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import { readBrief, clipDirPath } from './clip-store'
-import { chatCompletion, extractTsxCodeBlock } from './llm-client'
+import { readBrief, clipDirPath, ClipNotFoundError } from './clip-store'
+import { chatCompletion, extractTsxCodeBlock, LLMError } from './llm-client'
 import { getCaptionPreset } from '@/lib/editor/caption-presets'
 import { getPlatform } from '@/lib/editor/publish-platforms'
 import { BRANDS, DEFAULT_BRAND } from '@/lib/editor/brand-mock'
@@ -95,7 +95,7 @@ function buildUserPrompt(input: GenerateInput, brief: ClipBrief): string {
 
 export async function generateClipComposition(input: GenerateInput): Promise<GenerateResult> {
   const brief = await readBrief(input.clipId)
-  if (!brief) throw new Error(`clip not found: ${input.clipId}`)
+  if (!brief) throw new ClipNotFoundError(input.clipId)
 
   // Q1.7: archive current active take BEFORE we overwrite. Compute next version eagerly.
   const { nextVersion, previousMeta } = await archiveCurrentAndAllocateNext(input.clipId)
@@ -109,62 +109,65 @@ export async function generateClipComposition(input: GenerateInput): Promise<Gen
 
   const { text, meta } = chatRes
   if (!text) {
-    await writeGenerateRecord(input, brief, systemPrompt, userPrompt, meta, durationMs, null, 'empty-response')
+    await writeGenerateRecord(input, brief, systemPrompt, userPrompt, meta, durationMs, null, 'VALIDATION_EMPTY_RESPONSE')
     await registerNewTake(input.clipId, nextVersion, previousMeta, {
       generatedAt: new Date().toISOString(),
       model: meta.model,
       provider: meta.provider,
       codeLength: 0,
-      errorCode: 'empty-response',
+      errorCode: 'VALIDATION_EMPTY_RESPONSE',
       scenePrompt: input.scenePrompt,
     })
-    throw new Error('LLM 返回为空')
+    throw new LLMError('VALIDATION_EMPTY_RESPONSE', 'LLM returned an empty response.')
   }
   const code = extractTsxCodeBlock(text)
   if (!code) {
-    await writeGenerateRecord(input, brief, systemPrompt, userPrompt, meta, durationMs, text, 'no-code-block')
+    await writeGenerateRecord(input, brief, systemPrompt, userPrompt, meta, durationMs, text, 'VALIDATION_NO_CODE_BLOCK')
     await registerNewTake(input.clipId, nextVersion, previousMeta, {
       generatedAt: new Date().toISOString(),
       model: meta.model,
       provider: meta.provider,
       codeLength: 0,
-      errorCode: 'no-code-block',
+      errorCode: 'VALIDATION_NO_CODE_BLOCK',
       scenePrompt: input.scenePrompt,
     })
-    throw new Error('LLM 响应中未找到合法 tsx code block')
+    throw new LLMError('VALIDATION_NO_CODE_BLOCK', 'LLM response did not contain a parsable tsx code block.')
   }
 
   // Q1.12: import 白名单校验 — broken LLM 输出（如 hallucinate '@remotion/constants'）
   // 不允许覆盖 active Composition.tsx，否则 webpack 编译失败 → 全 route 500。
-  // Take 仍 register 但 errorCode='invalid-import' + 不写 src/Composition.tsx。
+  // Take 仍 register 但 errorCode='VALIDATION_INVALID_IMPORT' + 不写 src/Composition.tsx。
   const importViolation = validateImports(code)
   if (importViolation) {
-    await writeGenerateRecord(input, brief, systemPrompt, userPrompt, meta, durationMs, text, 'invalid-import')
+    await writeGenerateRecord(input, brief, systemPrompt, userPrompt, meta, durationMs, text, 'VALIDATION_INVALID_IMPORT')
     await registerNewTake(input.clipId, nextVersion, previousMeta, {
       generatedAt: new Date().toISOString(),
       model: meta.model,
       provider: meta.provider,
       codeLength: code.length,
-      errorCode: 'invalid-import',
+      errorCode: 'VALIDATION_INVALID_IMPORT',
       scenePrompt: input.scenePrompt,
     })
-    throw new Error(`LLM 输出含不允许的 import: ${importViolation}（仅允许 react / remotion / @remotion/* / framer-motion）`)
+    throw new LLMError(
+      'VALIDATION_INVALID_IMPORT',
+      `LLM output contains a disallowed import: ${importViolation} (only react / remotion / @remotion/* / framer-motion allowed).`,
+    )
   }
 
   // Q1.12: syntax 校验 — 用 typescript transpileModule 检查能否编译。
   // 防 LLM 写出 'export default Foo:' 这种 syntax bug 把 webpack 整个 route 挂掉。
   const syntaxViolation = await validateSyntax(code)
   if (syntaxViolation) {
-    await writeGenerateRecord(input, brief, systemPrompt, userPrompt, meta, durationMs, text, 'invalid-syntax')
+    await writeGenerateRecord(input, brief, systemPrompt, userPrompt, meta, durationMs, text, 'VALIDATION_INVALID_SYNTAX')
     await registerNewTake(input.clipId, nextVersion, previousMeta, {
       generatedAt: new Date().toISOString(),
       model: meta.model,
       provider: meta.provider,
       codeLength: code.length,
-      errorCode: 'invalid-syntax',
+      errorCode: 'VALIDATION_INVALID_SYNTAX',
       scenePrompt: input.scenePrompt,
     })
-    throw new Error(`LLM 输出 tsx 解析失败: ${syntaxViolation}`)
+    throw new LLMError('VALIDATION_INVALID_SYNTAX', `LLM output failed to parse as tsx: ${syntaxViolation}`)
   }
 
   const compPath = path.join(clipDirPath(input.clipId), 'src', 'Composition.tsx')
