@@ -42,7 +42,15 @@ paths:
                 required: [clips]
     post:
       tags: [clips]
-      summary: Create clip
+      summary: Create clip (idempotent ensure if id provided)
+      description: |
+        If `id` is provided, the endpoint behaves as an idempotent ensure:
+        - existing clip with that id → 200 { clip } (does not touch disk)
+        - new clip → 201 { clip } created with the provided id
+
+        If `id` is omitted, a fresh id is generated from `name` and a new clip
+        is always created (201). This branch can still 409 on rare slug
+        collisions (random uuid suffix).
       requestBody:
         required: true
         content:
@@ -51,7 +59,23 @@ paths:
               type: object
               properties:
                 name: { type: string, description: 'Display name. Empty → "Untitled clip".' }
+                id:
+                  type: string
+                  description: |
+                    Optional. When supplied, must match the clip-id regex.
+                    Used by the v0.2 demo to pin `demo-session` so reloads do
+                    not accumulate session clips on disk.
+                  pattern: '^[a-z0-9][a-z0-9-]{0,71}$'
       responses:
+        '200':
+          description: Existing clip returned (idempotent ensure, id-branch only)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clip: { $ref: '#/components/schemas/ClipBrief' }
+                required: [clip]
         '201':
           description: Created
           content:
@@ -61,8 +85,13 @@ paths:
                 properties:
                   clip: { $ref: '#/components/schemas/ClipBrief' }
                 required: [clip]
+        '400':
+          description: Invalid clip id
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         '409':
-          description: ID conflict
+          description: ID conflict (only possible in the auto-generated-id branch)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
