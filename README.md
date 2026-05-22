@@ -52,6 +52,27 @@ Click **+ New clip**, fill in the brief, hit Generate. The agent writes the comp
 | `bun run check:secrets` | Fail if OpenAI keys (`sk-...`) leak in |
 | `bun run check` | All of the above sequentially |
 
+## Pre-commit hooks
+
+[Lefthook](https://github.com/evilmartians/lefthook) wires the same checks into git so a broken commit can't land on `main`. It installs automatically on `bun install` via the `prepare` script.
+
+- **pre-commit** (parallel): `lint` · `typecheck` · `check:secrets` · `check:purity` — each filtered by relevant glob, so unrelated commits aren't slowed down
+- **pre-push**: `bun run test`
+
+If a check is wrong for a specific line, suppress it with an inline comment that explains why:
+
+```ts
+const message = `episode goes here` // purity-allow: docs only, not business logic
+```
+
+```ts
+const example = 'sk-AAAA...long' // secret-allow: fixture, not a real key
+```
+
+Reviewers should always check the reason — empty `allow` comments are not acceptable.
+
+To re-install hooks manually (rarely needed): `bunx lefthook install`.
+
 ## Status
 
 - **T1 (scaffold)** — ✅ this commit
