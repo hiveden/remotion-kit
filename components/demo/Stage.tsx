@@ -21,7 +21,11 @@ export function Stage({ brand, brief }: Props) {
     >
       <div
         className="relative shadow-2xl"
-        style={{ aspectRatio: '9 / 16', maxHeight: 'min(90%, 720px)' }}
+        style={{
+          aspectRatio: '9 / 16',
+          height: '100%',
+          maxHeight: 720,
+        }}
         data-testid="demo-player"
       >
         <Player
