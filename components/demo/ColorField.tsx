@@ -20,7 +20,7 @@ export function ColorField({ value, onChange, testid }: Props) {
         type="color"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-7 w-7 cursor-pointer rounded border border-input bg-transparent p-0"
+        className="h-7 w-7 cursor-pointer rounded border border-border-strong bg-transparent p-0"
         aria-label="颜色"
         data-testid={testid ? `${testid}-picker` : undefined}
       />
@@ -33,7 +33,7 @@ export function ColorField({ value, onChange, testid }: Props) {
           if (HEX_RE.test(v)) onChange(v)
         }}
         spellCheck={false}
-        className="w-24 rounded border border-input bg-card px-2 py-1 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+        className="w-24 rounded border border-border-strong bg-input px-2 py-1 font-mono text-xs text-text-hi focus:border-primary focus:outline-none"
         data-testid={testid ? `${testid}-hex` : undefined}
       />
     </div>

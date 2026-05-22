@@ -11,20 +11,27 @@ interface Props {
   brief: DemoBrief
 }
 
-export function Stage({ brand, brief }: Props) {
+export function CanvasStage({ brand, brief }: Props) {
   const inputProps = React.useMemo(() => ({ brand, brief }), [brand, brief])
-
   return (
-    <main
-      className="flex h-[calc(100vh-56px)] flex-1 items-center justify-center bg-stage p-8"
+    <section
+      className="relative grid h-full w-full place-items-center overflow-hidden bg-canvas-surround transition-colors duration-200"
+      style={{ boxShadow: 'inset 0 0 0 1px var(--rk-border-soft)' }}
       data-testid="demo-stage"
     >
+      <span
+        aria-hidden
+        className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-[color:rgba(168,85,247,0.4)] bg-[color:rgba(168,85,247,0.15)] px-2.5 py-1 font-mono text-[10px] text-primary"
+      >
+        ▢ inspector 跟随左侧 rail 选择
+      </span>
       <div
-        className="relative shadow-2xl"
+        className="relative overflow-hidden rounded-lg"
         style={{
           aspectRatio: '9 / 16',
-          height: '100%',
-          maxHeight: 720,
+          height: 'min(85%, 600px)',
+          background: 'var(--rk-canvas)',
+          boxShadow: 'var(--rk-shadow-stage)',
         }}
         data-testid="demo-player"
       >
@@ -45,6 +52,6 @@ export function Stage({ brand, brief }: Props) {
           acknowledgeRemotionLicense
         />
       </div>
-    </main>
+    </section>
   )
 }

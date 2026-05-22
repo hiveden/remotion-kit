@@ -35,3 +35,8 @@ export interface DemoBrief {
 }
 
 export type ContentTab = 'cover' | 'body' | 'cta'
+
+// v0.2 inspector scope — what the right-side panel is editing right now.
+// Driven by the LeftRail. "brand" edits the brand kit; the three segment
+// scopes edit the corresponding brief region.
+export type InspectorScope = 'brand' | 'cover' | 'body' | 'cta'

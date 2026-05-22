@@ -16,7 +16,7 @@ interface Props<T extends string> {
 
 export function SegmentedControl<T extends string>({ options, value, onChange, testid }: Props<T>) {
   return (
-    <div className="inline-flex rounded border border-border bg-secondary p-0.5">
+    <div className="inline-flex rounded-md border border-border-strong bg-input p-0.5">
       {options.map((opt) => {
         const active = value === opt.value
         return (
@@ -25,10 +25,10 @@ export function SegmentedControl<T extends string>({ options, value, onChange, t
             type="button"
             onClick={() => onChange(opt.value)}
             className={
-              'rounded px-2.5 py-1 text-xs transition motion-reduce:transition-none ' +
+              'rounded px-2.5 py-1 text-[11px] transition-colors duration-200 motion-reduce:transition-none ' +
               (active
-                ? 'bg-card text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground')
+                ? 'bg-panel text-text-hi shadow-panel'
+                : 'text-text-lo hover:text-text-hi')
             }
             data-testid={testid ? `${testid}-${opt.value}` : undefined}
             data-state={active ? 'active' : 'inactive'}
