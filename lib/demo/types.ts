@@ -32,6 +32,22 @@ export interface DemoBrief {
     text: string
     logoPlacement: LogoPlacement
   }
+  /**
+   * Component variant overrides. Each key holds a registry id like
+   * `cover/gradient-hero`. Missing entries fall through to the registry's
+   * default so v0.2-fix briefs stay rendering bit-for-bit.
+   */
+  componentType?: {
+    cover?: string
+    body?: string
+    cta?: string
+  }
+  /** Element-level overrides per segment, merged on top of registry defaults. */
+  elements?: {
+    cover?: Record<string, unknown>
+    body?: Record<string, unknown>
+    cta?: Record<string, unknown>
+  }
 }
 
 // L0 = browse layout (sidebar + stage only). L1 = expanded layout, the right

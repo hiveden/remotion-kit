@@ -10,6 +10,8 @@ import type {
   ParamScope,
   SubtitleStyleId,
 } from '@/lib/demo/types'
+import { registryFor } from '@/lib/templates/registry'
+import type { SegmentRole } from '@/lib/templates/registry'
 import { ColorField } from './ColorField'
 import { SegmentedControl } from './SegmentedControl'
 import { MetricsEditor } from './MetricsEditor'
@@ -67,6 +69,43 @@ function FieldRow({
       </div>
       {children}
     </label>
+  )
+}
+
+function VariantPicker({
+  scope,
+  brief,
+  onChange,
+}: {
+  scope: SegmentRole
+  brief: DemoBrief
+  onChange: (next: DemoBrief) => void
+}) {
+  const registry = registryFor(scope)
+  const entries = registry.metadata()
+  const current = brief.componentType?.[scope] ?? registry.defaultEntryId() ?? ''
+  function setVariant(id: string) {
+    onChange({
+      ...brief,
+      componentType: { ...brief.componentType, [scope]: id },
+    })
+  }
+  if (entries.length <= 1) return null
+  return (
+    <FieldRow label="组件变体" hint={`${entries.length} 个`}>
+      <select
+        value={current}
+        onChange={(e) => setVariant(e.target.value)}
+        className={inputClass}
+        data-testid={`${scope}-component-variant`}
+      >
+        {entries.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.name}
+          </option>
+        ))}
+      </select>
+    </FieldRow>
   )
 }
 
@@ -204,6 +243,7 @@ function CoverFields({
   }
   return (
     <>
+      <VariantPicker scope="cover" brief={brief} onChange={onChange} />
       <FieldRow label="标题">
         <textarea
           rows={2}
@@ -253,6 +293,7 @@ function BodyFields({
   }
   return (
     <>
+      <VariantPicker scope="body" brief={brief} onChange={onChange} />
       <FieldRow label="段标题">
         <input
           type="text"
@@ -286,6 +327,7 @@ function CtaFields({
   }
   return (
     <>
+      <VariantPicker scope="cta" brief={brief} onChange={onChange} />
       <FieldRow label="文案">
         <input
           type="text"
