@@ -1,0 +1,45 @@
+# dependencies
+node_modules
+.pnp.*
+
+# Next.js build output
+.next
+out
+build
+dist
+*.tgz
+
+# Runtime workspace (user-owned data)
+.workspace
+
+# logs
+logs
+*.log
+report.*.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# coverage
+coverage
+*.lcov
+
+# env files (.env.example is committed)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# caches / build artifacts
+.eslintcache
+.cache
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE / OS
+.idea
+.vscode
+.DS_Store
+*.swp
