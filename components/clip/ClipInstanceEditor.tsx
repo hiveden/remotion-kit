@@ -105,12 +105,17 @@ export function ClipInstanceEditor({ brief: initial, clipDir }: Props) {
   const ccCmd = `cd ${clipDir} && cc`
 
   return (
-    <div className="flex h-full flex-col">
+    <div
+      className="flex h-full flex-col"
+      data-testid="clip-editor-root"
+      data-state={saveState}
+    >
       <header className="flex items-center justify-between border-b px-4 py-2">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push('/clip')}
             className="text-sm text-muted-foreground hover:underline"
+            data-testid="clip-editor-back"
           >
             ← Clip list
           </button>
@@ -118,8 +123,12 @@ export function ClipInstanceEditor({ brief: initial, clipDir }: Props) {
             defaultValue={brief.name}
             onBlur={onNameBlur}
             className="rounded border bg-transparent px-2 py-1 text-base font-medium"
+            data-testid="clip-editor-name"
           />
-          <span className="text-xs text-muted-foreground">
+          <span
+            className="text-xs text-muted-foreground"
+            data-testid="clip-editor-save-state"
+          >
             {saveState === 'saving' && '保存中…'}
             {saveState === 'saved' && '已保存'}
             {saveState === 'error' && '保存失败'}
@@ -127,17 +136,19 @@ export function ClipInstanceEditor({ brief: initial, clipDir }: Props) {
           </span>
         </div>
         <div className="flex items-center gap-2 text-xs">
-          <CopyChip label="path" value={clipDir} />
-          <CopyChip label="cd && cc" value={ccCmd} />
+          <CopyChip label="path" value={clipDir} testid="clip-editor-copy-path" />
+          <CopyChip label="cd && cc" value={ccCmd} testid="clip-editor-copy-cmd" />
           <button
             onClick={() => { void onArchive(brief.status !== 'archived') }}
             className="rounded border px-2 py-1 hover:bg-accent"
+            data-testid="clip-editor-archive"
           >
             {brief.status === 'archived' ? 'Unarchive' : 'Archive'}
           </button>
           <button
             onClick={() => { void onDelete() }}
             className="rounded border px-2 py-1 hover:bg-destructive hover:text-destructive-foreground"
+            data-testid="clip-editor-delete"
           >
             Delete
           </button>
@@ -145,7 +156,10 @@ export function ClipInstanceEditor({ brief: initial, clipDir }: Props) {
       </header>
 
       <div className="grid flex-1 grid-cols-[420px_1fr] overflow-hidden">
-        <aside className="flex flex-col overflow-auto border-r">
+        <aside
+          className="flex flex-col overflow-auto border-r"
+          data-testid="clip-editor-brief-pane"
+        >
           <ClipBriefForm brief={brief} onChange={onBriefFormChange} />
           <ClipReferencesInline references={brief.references} onChange={onReferencesChange} />
           <ClipGenerateSection
@@ -155,7 +169,10 @@ export function ClipInstanceEditor({ brief: initial, clipDir }: Props) {
               setTakesRefreshKey((k) => k + 1)
             }}
           />
-          <div className="border-t bg-neutral-950/30 p-3">
+          <div
+            className="border-t bg-neutral-950/30 p-3"
+            data-testid="clip-editor-takes-pane"
+          >
             <TakeHistoryStrip
               clipId={brief.id}
               refreshKey={takesRefreshKey}
@@ -166,7 +183,7 @@ export function ClipInstanceEditor({ brief: initial, clipDir }: Props) {
             />
           </div>
         </aside>
-        <main className="overflow-hidden">
+        <main className="overflow-hidden" data-testid="clip-editor-preview-pane">
           <ClipPreviewPane brief={brief} reloadKey={reloadKey} />
         </main>
       </div>
@@ -174,12 +191,13 @@ export function ClipInstanceEditor({ brief: initial, clipDir }: Props) {
   )
 }
 
-function CopyChip({ label, value }: { label: string; value: string }) {
+function CopyChip({ label, value, testid }: { label: string; value: string; testid?: string }) {
   return (
     <button
       title={value}
       onClick={() => { void navigator.clipboard.writeText(value) }}
       className="rounded border px-2 py-1 font-mono hover:bg-accent"
+      data-testid={testid}
     >
       📋 {label}
     </button>

@@ -43,7 +43,11 @@ class ErrorBoundary extends React.Component<
   override render() {
     if (this.state.hasError) {
       return (
-        <pre className="absolute inset-0 overflow-auto p-3 font-mono text-xs text-red-300">
+        <pre
+          className="absolute inset-0 overflow-auto p-3 font-mono text-xs text-red-300"
+          data-testid="clip-preview-error"
+          data-state="error"
+        >
           {this.state.err?.stack ?? this.state.err?.message ?? 'render error'}
         </pre>
       )
@@ -75,7 +79,10 @@ export function ClipPreviewPane({ brief, reloadKey = 0 }: Props) {
   )
 
   return (
-    <div className="flex h-full w-full flex-col bg-black text-white">
+    <div
+      className="flex h-full w-full flex-col bg-black text-white"
+      data-testid="clip-preview-root"
+    >
       {/* Top — path label + reload */}
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-2 text-xs">
         <span className="font-mono text-white/70">
@@ -85,6 +92,7 @@ export function ClipPreviewPane({ brief, reloadKey = 0 }: Props) {
           onClick={() => setErrorKey((k) => k + 1)}
           className="rounded border border-white/20 px-2 py-0.5 text-[10px] hover:bg-white/10"
           title="重载 Composition"
+          data-testid="clip-preview-reload"
         >
           ↻ 重载
         </button>
@@ -107,23 +115,25 @@ export function ClipPreviewPane({ brief, reloadKey = 0 }: Props) {
           }}
         >
           <ErrorBoundary key={`${errorKey}-${reloadKey}`} onError={() => {}}>
-            <Player
-              lazyComponent={lazyComponent}
-              inputProps={inputProps}
-              durationInFrames={durationInFrames}
-              fps={fps}
-              compositionWidth={width}
-              compositionHeight={height}
-              style={{ width: '100%', height: '100%' }}
-              controls
-              autoPlay
-              loop
-              showVolumeControls
-              clickToPlay
-              spaceKeyToPlayOrPause
-              doubleClickToFullscreen
-              acknowledgeRemotionLicense
-            />
+            <div className="h-full w-full" data-testid="clip-preview-player">
+              <Player
+                lazyComponent={lazyComponent}
+                inputProps={inputProps}
+                durationInFrames={durationInFrames}
+                fps={fps}
+                compositionWidth={width}
+                compositionHeight={height}
+                style={{ width: '100%', height: '100%' }}
+                controls
+                autoPlay
+                loop
+                showVolumeControls
+                clickToPlay
+                spaceKeyToPlayOrPause
+                doubleClickToFullscreen
+                acknowledgeRemotionLicense
+              />
+            </div>
           </ErrorBoundary>
         </div>
       </div>

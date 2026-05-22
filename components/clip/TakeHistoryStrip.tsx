@@ -73,14 +73,26 @@ export function TakeHistoryStrip({ clipId, onSwitched, refreshKey = 0 }: Props) 
   }
 
   if (loading && data.takes.length === 0) {
-    return <div className="text-[10px] text-muted-foreground">loading takes…</div>
+    return (
+      <div
+        className="text-[10px] text-muted-foreground"
+        data-testid="clip-takes-strip"
+        data-state="loading"
+      >
+        loading takes…
+      </div>
+    )
   }
   if (data.takes.length === 0) {
     return null // 无历史不渲染
   }
 
   return (
-    <div className="flex flex-col gap-1" data-testid="take-history-strip">
+    <div
+      className="flex flex-col gap-1"
+      data-testid="clip-takes-strip"
+      data-state="success"
+    >
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
         Take 历史 ({data.takes.length})
       </div>
@@ -94,7 +106,7 @@ export function TakeHistoryStrip({ clipId, onSwitched, refreshKey = 0 }: Props) 
             <button
               key={t.version}
               type="button"
-              data-testid={`take-chip-${t.version}`}
+              data-testid={`clip-takes-chip-${t.version}`}
               data-active={isActive ? 'true' : 'false'}
               onClick={() => void onSwitch(t.version)}
               disabled={isSwitching || isActive}

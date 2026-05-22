@@ -102,10 +102,14 @@ export function ClipGenerateSection({ brief, onGenerated }: Props) {
   }
 
   return (
-    <section className="flex flex-col gap-2 border-t bg-neutral-950/30 p-3 text-sm">
+    <section
+      className="flex flex-col gap-2 border-t bg-neutral-950/30 p-3 text-sm"
+      data-testid="clip-generate-section"
+      data-state={state}
+    >
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">AI 生成 · refinement</h3>
-        <div className="text-[10px]">{sourceChip()}</div>
+        <div className="text-[10px]" data-testid="clip-generate-source-chip">{sourceChip()}</div>
       </div>
 
       <div>
@@ -117,6 +121,7 @@ export function ClipGenerateSection({ brief, onGenerated }: Props) {
           placeholder="描述你想要的视频画面 / 节奏 / 文案…"
           className="w-full rounded border border-white/10 bg-background p-2 text-xs disabled:opacity-60"
           disabled={state === 'generating'}
+          data-testid="clip-generate-scene-prompt"
         />
       </div>
 
@@ -130,6 +135,7 @@ export function ClipGenerateSection({ brief, onGenerated }: Props) {
             placeholder="例：中心对齐，缓慢推近"
             className="w-full rounded border border-white/10 bg-background px-2 py-1 text-xs disabled:opacity-60"
             disabled={state === 'generating'}
+            data-testid="clip-generate-camera-hint"
           />
         </div>
         <div>
@@ -146,6 +152,7 @@ export function ClipGenerateSection({ brief, onGenerated }: Props) {
             }}
             disabled={state === 'generating'}
             className="w-20 rounded border border-white/10 bg-background px-2 py-1 text-xs disabled:opacity-60"
+            data-testid="clip-generate-duration"
           />
         </div>
       </div>
@@ -155,18 +162,25 @@ export function ClipGenerateSection({ brief, onGenerated }: Props) {
         onClick={() => void onGenerate()}
         disabled={!canGenerate}
         className="rounded bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+        data-testid="clip-generate-submit"
       >
-        {state === 'generating' ? '⏳ 生成中…（qwen 27b 本地推理 3-15 min，请耐心）' : '▶ 重新生成 Composition.tsx'}
+        {state === 'generating' ? '⏳ 生成中…' : '▶ 重新生成 Composition.tsx'}
       </button>
 
       {state === 'error' && errorMsg ? (
-        <div className="rounded border border-red-500/50 bg-red-500/10 p-2 text-xs text-red-200">
+        <div
+          className="rounded border border-red-500/50 bg-red-500/10 p-2 text-xs text-red-200"
+          data-testid="clip-generate-error"
+        >
           ⚠ 生成失败：{errorMsg}
         </div>
       ) : null}
 
       {state === 'done' && genResult ? (
-        <div className="rounded border border-emerald-500/50 bg-emerald-500/10 p-2 text-xs text-emerald-200">
+        <div
+          className="rounded border border-emerald-500/50 bg-emerald-500/10 p-2 text-xs text-emerald-200"
+          data-testid="clip-generate-success"
+        >
           ✓ 生成成功 · {genResult.codeLength} chars at {new Date(genResult.generatedAt).toLocaleTimeString()}
           <br />
           预览已自动刷新（如未变化点右边 [↻ 重载]）。
@@ -174,7 +188,7 @@ export function ClipGenerateSection({ brief, onGenerated }: Props) {
       ) : null}
 
       {recordData?.source === 'persisted' && recordData.record?.systemPrompt ? (
-        <details className="text-[10px] text-muted-foreground">
+        <details className="text-[10px] text-muted-foreground" data-testid="clip-generate-details">
           <summary className="cursor-pointer hover:text-white">查看上次的 system prompt + raw response</summary>
           <div className="mt-1 flex flex-col gap-1">
             <pre className="max-h-32 overflow-auto whitespace-pre-wrap rounded border border-white/10 bg-neutral-900/40 p-1">{recordData.record.systemPrompt}</pre>

@@ -58,12 +58,13 @@ export function ClipBriefForm({ brief, onChange }: Props) {
   const brandMissing = brief.brandRef !== null && !BRANDS.find((b) => b.id === brief.brandRef)
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-4 p-4" data-testid="clip-brief-form">
       <Field label="Brand">
         <select
           value={brief.brandRef ?? ''}
           onChange={(e) => onChange({ brandRef: e.target.value || null })}
           className="w-full rounded border bg-background p-2 text-sm"
+          data-testid="clip-brief-brand"
         >
           <option value="">(none)</option>
           {BRANDS.map((b) => (
@@ -73,7 +74,12 @@ export function ClipBriefForm({ brief, onChange }: Props) {
           ))}
         </select>
         {brandMissing && (
-          <p className="mt-1 text-xs text-yellow-600">⚠ brand {brief.brandRef} missing</p>
+          <p
+            className="mt-1 text-xs text-yellow-600"
+            data-testid="clip-brief-brand-missing"
+          >
+            ⚠ brand {brief.brandRef} missing
+          </p>
         )}
       </Field>
 
@@ -82,6 +88,7 @@ export function ClipBriefForm({ brief, onChange }: Props) {
           value={brief.aspectRatio}
           options={ASPECT_RATIOS}
           onChange={(v) => onChange({ aspectRatio: v })}
+          testid="clip-brief-aspect-ratio"
         />
       </Field>
 
@@ -90,6 +97,7 @@ export function ClipBriefForm({ brief, onChange }: Props) {
           value={brief.resolution}
           options={RESOLUTIONS}
           onChange={(v) => onChange({ resolution: v })}
+          testid="clip-brief-resolution"
         />
       </Field>
 
@@ -98,6 +106,7 @@ export function ClipBriefForm({ brief, onChange }: Props) {
           value={brief.publishPlatform}
           options={PUBLISH_PLATFORMS}
           onChange={(v) => onChange({ publishPlatform: v })}
+          testid="clip-brief-publish-platform"
         />
       </Field>
 
@@ -106,6 +115,7 @@ export function ClipBriefForm({ brief, onChange }: Props) {
           value={brief.captionStyle}
           options={CAPTION_STYLES}
           onChange={(v) => onChange({ captionStyle: v })}
+          testid="clip-brief-caption-style"
         />
       </Field>
 
@@ -120,6 +130,7 @@ export function ClipBriefForm({ brief, onChange }: Props) {
             if (Number.isFinite(n) && n > 0) onChange({ targetDuration: n })
           }}
           className="w-full rounded border bg-background p-2 text-sm"
+          data-testid="clip-brief-target-duration"
         />
       </Field>
 
@@ -131,6 +142,7 @@ export function ClipBriefForm({ brief, onChange }: Props) {
           rows={8}
           className="w-full rounded border bg-background p-2 text-sm font-mono"
           placeholder="给 cc 看的任务描述：想做什么、参考哪个 ref、节奏、要点……"
+          data-testid="clip-brief-note"
         />
       </Field>
     </div>
@@ -150,14 +162,16 @@ interface EnumSelectProps<T extends string> {
   value: T
   options: readonly T[]
   onChange: (v: T) => void
+  testid?: string
 }
 
-function EnumSelect<T extends string>({ value, options, onChange }: EnumSelectProps<T>) {
+function EnumSelect<T extends string>({ value, options, onChange, testid }: EnumSelectProps<T>) {
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as T)}
       className="w-full rounded border bg-background p-2 text-sm"
+      data-testid={testid}
     >
       {options.map((o) => (
         <option key={o} value={o}>

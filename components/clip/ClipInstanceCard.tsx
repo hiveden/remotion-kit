@@ -20,16 +20,25 @@ interface Props {
 
 export function ClipInstanceCard({ brief, onDuplicate, onArchive, onDelete }: Props) {
   return (
-    <div className="group relative flex flex-col gap-2 rounded border bg-card p-3">
-      <Link href={`/clip/${brief.id}`} className="flex flex-col gap-2">
+    <div
+      className="group relative flex flex-col gap-2 rounded border bg-card p-3"
+      data-testid="clip-card"
+      data-clip-id={brief.id}
+    >
+      <Link
+        href={`/clip/${brief.id}`}
+        className="flex flex-col gap-2"
+        data-testid="clip-card-link"
+      >
         <div className="flex items-center justify-between">
-          <span className="truncate text-sm font-medium">{brief.name}</span>
+          <span className="truncate text-sm font-medium" data-testid="clip-card-name">{brief.name}</span>
           <span
             className={`rounded px-1.5 py-0.5 text-[10px] ${
               brief.status === 'archived'
                 ? 'bg-muted text-muted-foreground'
                 : 'bg-emerald-500/10 text-emerald-700'
             }`}
+            data-testid="clip-card-status"
           >
             {brief.status}
           </span>
@@ -43,9 +52,9 @@ export function ClipInstanceCard({ brief, onDuplicate, onArchive, onDelete }: Pr
         <span className="text-[10px] text-muted-foreground">{formatRelativeTime(brief.updatedAt)}</span>
       </Link>
       <div className="absolute right-2 top-2 hidden gap-1 group-hover:flex">
-        <IconBtn onClick={() => onDuplicate(brief.id)} label="复制">⎘</IconBtn>
-        <IconBtn onClick={() => onArchive(brief.id, brief.status !== 'archived')} label="归档/取消归档">⊠</IconBtn>
-        <IconBtn onClick={() => onDelete(brief.id)} label="删除">🗑</IconBtn>
+        <IconBtn onClick={() => onDuplicate(brief.id)} label="复制" testid="clip-card-duplicate">⎘</IconBtn>
+        <IconBtn onClick={() => onArchive(brief.id, brief.status !== 'archived')} label="归档/取消归档" testid="clip-card-archive">⊠</IconBtn>
+        <IconBtn onClick={() => onDelete(brief.id)} label="删除" testid="clip-card-delete">🗑</IconBtn>
       </div>
     </div>
   )
@@ -55,7 +64,17 @@ function Chip({ children }: { children: React.ReactNode }) {
   return <span className="rounded border bg-background px-1.5 py-0.5">{children}</span>
 }
 
-function IconBtn({ onClick, label, children }: { onClick: () => void; label: string; children: React.ReactNode }) {
+function IconBtn({
+  onClick,
+  label,
+  children,
+  testid,
+}: {
+  onClick: () => void
+  label: string
+  children: React.ReactNode
+  testid?: string
+}) {
   return (
     <button
       onClick={(e) => {
@@ -65,6 +84,7 @@ function IconBtn({ onClick, label, children }: { onClick: () => void; label: str
       }}
       title={label}
       className="h-6 w-6 rounded bg-background/80 text-xs hover:bg-accent"
+      data-testid={testid}
     >
       {children}
     </button>
