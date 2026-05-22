@@ -78,3 +78,36 @@ export const CtaIcon: React.FC<IconProps> = (props) => (
     <path d="M4 12h12M12 6l6 6-6 6" />
   </svg>
 )
+
+export const ChevronRight: React.FC<IconProps> = (props) => (
+  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M4.5 3L7.5 6L4.5 9" />
+  </svg>
+)
+
+export const ChevronLeft: React.FC<IconProps> = (props) => (
+  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M7.5 3L4.5 6L7.5 9" />
+  </svg>
+)
+
+export const Send: React.FC<IconProps> = (props) => (
+  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M1.5 6L10.5 1.5L7.5 10.5L6 6.5L1.5 6Z" />
+  </svg>
+)
+
+export const Spinner: React.FC<IconProps> = (props) => (
+  <svg
+    viewBox="0 0 12 12"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    style={{ animation: 'rk-spin 0.8s linear infinite' }}
+    {...props}
+  >
+    <path d="M6 1.5a4.5 4.5 0 1 1-4.5 4.5" opacity="0.3" />
+    <path d="M6 1.5a4.5 4.5 0 0 1 4.5 4.5" />
+  </svg>
+)

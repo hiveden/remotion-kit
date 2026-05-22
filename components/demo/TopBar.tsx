@@ -3,22 +3,18 @@
 import React from 'react'
 import { Sun, Moon, GitHubMark } from './icons'
 import { useTheme } from './ThemeProvider'
-import type { InspectorScope } from '@/lib/demo/types'
+import { LayoutToggleButton } from './LayoutToggleButton'
+import type { DemoLayout } from '@/lib/demo/types'
 
 interface Props {
-  scope: InspectorScope
-}
-
-const SCOPE_LABEL: Record<InspectorScope, string> = {
-  brand: 'Brand · 品牌',
-  cover: 'Cover · 封面段',
-  body: 'Body · 内容段',
-  cta: 'CTA · 收尾段',
+  layout: DemoLayout
+  onLayoutChange: (next: DemoLayout) => void
+  templateLabel: string
 }
 
 const REPO_URL = 'https://github.com/hiveden/remotion-kit'
 
-export function TopBar({ scope }: Props) {
+export function TopBar({ layout, onLayoutChange, templateLabel }: Props) {
   const { theme, toggle } = useTheme()
   return (
     <header
@@ -32,15 +28,15 @@ export function TopBar({ scope }: Props) {
         >
           RK
         </span>
-        <span className="font-mono text-xs text-text-md">remotion-kit / studio · {theme}</span>
+        <span className="font-mono text-xs text-text-md">remotion-kit</span>
       </div>
 
       <div className="flex flex-1 items-center gap-2">
         <span
-          className="rounded-full border border-[color:rgba(168,85,247,0.35)] bg-[color:rgba(168,85,247,0.12)] px-2 py-0.5 font-mono text-[11px] text-primary"
-          data-testid="demo-topbar-scope"
+          className="rounded-full border border-[color:rgba(168,85,247,0.35)] bg-[color:rgba(168,85,247,0.12)] px-3 py-1 font-mono text-[11px] text-primary"
+          data-testid="topbar-current-template"
         >
-          ▢ 选中：{SCOPE_LABEL[scope]}
+          当前模板：<span className="text-text-hi">{templateLabel}</span>
         </span>
       </div>
 
@@ -55,6 +51,7 @@ export function TopBar({ scope }: Props) {
         >
           {theme === 'light' ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
         </button>
+        <LayoutToggleButton layout={layout} onChange={onLayoutChange} />
         <a
           href={REPO_URL}
           target="_blank"

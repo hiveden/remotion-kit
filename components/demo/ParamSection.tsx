@@ -6,20 +6,29 @@ import type {
   DemoBrandState,
   DemoBrief,
   FontPreset,
-  InspectorScope,
   LogoPlacement,
+  ParamScope,
   SubtitleStyleId,
 } from '@/lib/demo/types'
 import { ColorField } from './ColorField'
 import { SegmentedControl } from './SegmentedControl'
 import { MetricsEditor } from './MetricsEditor'
+import { ChevronDown } from './icons'
 
 interface Props {
-  scope: InspectorScope
+  scope: ParamScope
   brand: DemoBrandState
   brief: DemoBrief
   onBrandChange: (next: DemoBrandState) => void
   onBriefChange: (next: DemoBrief) => void
+  defaultOpen?: boolean
+}
+
+const SCOPE_LABEL: Record<ParamScope, string> = {
+  brand: 'Brand · 品牌',
+  cover: 'Cover · 封面',
+  body: 'Body · 内容',
+  cta: 'CTA · 收尾',
 }
 
 const FONT_PRESETS: ReadonlyArray<{ value: FontPreset; label: string }> = [
@@ -27,82 +36,89 @@ const FONT_PRESETS: ReadonlyArray<{ value: FontPreset; label: string }> = [
   { value: 'comfortable', label: '舒展' },
   { value: 'spacious', label: '宽松' },
 ]
-
 const SUBTITLE_STYLES: ReadonlyArray<{ value: SubtitleStyleId; label: string }> = [
   { value: 'classic', label: '经典' },
   { value: 'bold', label: '加粗' },
   { value: 'lecture', label: '讲解' },
 ]
-
 const LOGO_PLACEMENTS: ReadonlyArray<{ value: LogoPlacement; label: string }> = [
   { value: 'left', label: '左' },
   { value: 'center', label: '中' },
   { value: 'right', label: '右' },
 ]
 
-const SCOPE_META: Record<InspectorScope, { icon: string; title: string; path: string }> = {
-  brand: { icon: 'B', title: 'Brand 品牌套件', path: 'remotion-kit › brand' },
-  cover: { icon: 'C', title: 'Cover 封面段', path: 'brief › cover' },
-  body: { icon: 'M', title: 'Body 内容段', path: 'brief › body' },
-  cta: { icon: '→', title: 'CTA 收尾段', path: 'brief › cta' },
-}
+const inputClass =
+  'w-full rounded border border-border-strong bg-input px-2 py-1.5 text-[12px] text-text-hi transition-colors focus:border-primary focus:outline-none'
 
-interface FieldProps {
+function FieldRow({
+  label,
+  hint,
+  children,
+}: {
   label: string
   hint?: string
   children: React.ReactNode
-}
-
-function Field({ label, hint, children }: FieldProps) {
+}) {
   return (
-    <div className="border-b border-border px-4 py-2.5">
-      <div className="mb-1.5 flex items-center justify-between text-[10px] uppercase tracking-wider text-text-lo">
+    <label className="block">
+      <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-wider text-text-lo">
         <span>{label}</span>
         {hint && <span className="font-mono normal-case tracking-normal">{hint}</span>}
       </div>
       {children}
-    </div>
+    </label>
   )
 }
 
-const inputClass =
-  'w-full rounded border border-border-strong bg-input px-2 py-1.5 text-xs text-text-hi transition-colors focus:border-primary focus:outline-none'
-
-export function Inspector({ scope, brand, brief, onBrandChange, onBriefChange }: Props) {
-  const meta = SCOPE_META[scope]
+export function ParamSection({
+  scope,
+  brand,
+  brief,
+  onBrandChange,
+  onBriefChange,
+  defaultOpen = true,
+}: Props) {
+  const [open, setOpen] = React.useState(defaultOpen)
   return (
-    <aside
-      className="flex h-full flex-col overflow-y-auto border-l border-border bg-panel transition-colors duration-200"
-      data-testid="demo-inspector"
-      data-scope={scope}
+    <section
+      className="border-b border-border-soft last:border-b-0"
+      data-testid={`param-section-${scope}`}
+      data-state={open ? 'expanded' : 'collapsed'}
     >
-      <header className="border-b border-border px-4 py-3.5">
-        <div className="flex items-center gap-2 text-xs text-text-hi">
-          <span className="grid h-5 w-5 place-items-center rounded bg-primary font-mono text-[10px] text-white">
-            {meta.icon}
-          </span>
-          {meta.title}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-9 w-full cursor-pointer items-center gap-2 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-text-md transition-colors hover:bg-input hover:text-text-hi"
+        aria-expanded={open}
+        data-testid={`param-section-${scope}-summary`}
+      >
+        <span aria-hidden className="h-3 w-1 rounded-sm bg-primary" />
+        {SCOPE_LABEL[scope]}
+        <ChevronDown
+          className={
+            'ml-auto h-3 w-3 transition-transform duration-150 ' +
+            (open ? 'rotate-0' : '-rotate-90')
+          }
+          aria-hidden
+        />
+      </button>
+      {open && (
+        <div className="space-y-3 px-4 pb-3 pt-1">
+          {scope === 'brand' && (
+            <BrandFields brand={brand} onChange={onBrandChange} />
+          )}
+          {scope === 'cover' && (
+            <CoverFields brief={brief} onChange={onBriefChange} />
+          )}
+          {scope === 'body' && <BodyFields brief={brief} onChange={onBriefChange} />}
+          {scope === 'cta' && <CtaFields brief={brief} onChange={onBriefChange} />}
         </div>
-        <div className="mt-1 font-mono text-[10px] text-text-lo">{meta.path}</div>
-      </header>
-
-      {scope === 'brand' && (
-        <BrandPane brand={brand} onChange={onBrandChange} />
       )}
-      {scope === 'cover' && (
-        <CoverPane brief={brief} onChange={onBriefChange} />
-      )}
-      {scope === 'body' && (
-        <BodyPane brief={brief} onChange={onBriefChange} />
-      )}
-      {scope === 'cta' && (
-        <CtaPane brief={brief} onChange={onBriefChange} />
-      )}
-    </aside>
+    </section>
   )
 }
 
-function BrandPane({
+function BrandFields({
   brand,
   onChange,
 }: {
@@ -115,8 +131,8 @@ function BrandPane({
     onChange({ ...preset, fontPreset: brand.fontPreset })
   }
   return (
-    <div>
-      <Field label="Preset">
+    <>
+      <FieldRow label="Preset">
         <select
           value={brand.id}
           onChange={(e) => applyPreset(e.target.value)}
@@ -129,8 +145,8 @@ function BrandPane({
             </option>
           ))}
         </select>
-      </Field>
-      <Field label="品牌名">
+      </FieldRow>
+      <FieldRow label="品牌名">
         <input
           type="text"
           value={brand.name}
@@ -138,22 +154,22 @@ function BrandPane({
           className={inputClass}
           data-testid="brand-name"
         />
-      </Field>
-      <Field label="主色">
+      </FieldRow>
+      <FieldRow label="主色">
         <ColorField
           value={brand.colors.primary}
           onChange={(primary) => onChange({ ...brand, colors: { ...brand.colors, primary } })}
           testid="brand-primary"
         />
-      </Field>
-      <Field label="副色">
+      </FieldRow>
+      <FieldRow label="副色">
         <ColorField
           value={brand.colors.secondary ?? '#3B82F6'}
           onChange={(secondary) => onChange({ ...brand, colors: { ...brand.colors, secondary } })}
           testid="brand-secondary"
         />
-      </Field>
-      <Field label="Logo 文字">
+      </FieldRow>
+      <FieldRow label="Logo 文字">
         <input
           type="text"
           value={brand.logo.text ?? ''}
@@ -163,131 +179,130 @@ function BrandPane({
           className={inputClass}
           data-testid="brand-logo-text"
         />
-      </Field>
-      <Field label="字体 preset">
+      </FieldRow>
+      <FieldRow label="字体 preset">
         <SegmentedControl
           options={FONT_PRESETS}
           value={brand.fontPreset}
           onChange={(fontPreset) => onChange({ ...brand, fontPreset })}
           testid="brand-font-preset"
         />
-      </Field>
-    </div>
+      </FieldRow>
+    </>
   )
 }
 
-function CoverPane({
+function CoverFields({
   brief,
   onChange,
 }: {
   brief: DemoBrief
   onChange: (next: DemoBrief) => void
 }) {
-  function patchCover(patch: Partial<DemoBrief['cover']>) {
-    onChange({ ...brief, cover: { ...brief.cover, ...patch } })
+  function patch(p: Partial<DemoBrief['cover']>) {
+    onChange({ ...brief, cover: { ...brief.cover, ...p } })
   }
   return (
-    <div>
-      <Field label="标题">
+    <>
+      <FieldRow label="标题">
         <textarea
           rows={2}
           value={brief.cover.title}
-          onChange={(e) => patchCover({ title: e.target.value })}
+          onChange={(e) => patch({ title: e.target.value })}
           className={inputClass + ' resize-none font-medium'}
           data-testid="cover-title"
         />
-      </Field>
-      <Field label="副标题">
+      </FieldRow>
+      <FieldRow label="副标题">
         <input
           type="text"
           value={brief.cover.subtitle}
-          onChange={(e) => patchCover({ subtitle: e.target.value })}
+          onChange={(e) => patch({ subtitle: e.target.value })}
           className={inputClass}
           data-testid="cover-subtitle"
         />
-      </Field>
-      <Field label="Tag">
+      </FieldRow>
+      <FieldRow label="Tag">
         <input
           type="text"
           value={brief.cover.tag}
-          onChange={(e) => patchCover({ tag: e.target.value })}
+          onChange={(e) => patch({ tag: e.target.value })}
           className={inputClass + ' w-32 font-mono uppercase'}
           data-testid="cover-tag"
         />
-      </Field>
-      <Field label="数据点" hint={`${brief.cover.metrics.length}/3`}>
+      </FieldRow>
+      <FieldRow label="数据点" hint={`${brief.cover.metrics.length}/3`}>
         <MetricsEditor
           metrics={brief.cover.metrics}
-          onChange={(metrics) => patchCover({ metrics })}
+          onChange={(metrics) => patch({ metrics })}
         />
-      </Field>
-    </div>
+      </FieldRow>
+    </>
   )
 }
 
-function BodyPane({
+function BodyFields({
   brief,
   onChange,
 }: {
   brief: DemoBrief
   onChange: (next: DemoBrief) => void
 }) {
-  function patchBody(patch: Partial<DemoBrief['body']>) {
-    onChange({ ...brief, body: { ...brief.body, ...patch } })
+  function patch(p: Partial<DemoBrief['body']>) {
+    onChange({ ...brief, body: { ...brief.body, ...p } })
   }
   return (
-    <div>
-      <Field label="段标题">
+    <>
+      <FieldRow label="段标题">
         <input
           type="text"
           value={brief.body.title}
-          onChange={(e) => patchBody({ title: e.target.value })}
+          onChange={(e) => patch({ title: e.target.value })}
           className={inputClass}
           data-testid="body-title"
         />
-      </Field>
-      <Field label="字幕样式">
+      </FieldRow>
+      <FieldRow label="字幕样式">
         <SegmentedControl
           options={SUBTITLE_STYLES}
           value={brief.body.subtitleStyle}
-          onChange={(subtitleStyle) => patchBody({ subtitleStyle })}
+          onChange={(subtitleStyle) => patch({ subtitleStyle })}
           testid="body-subtitle-style"
         />
-      </Field>
-    </div>
+      </FieldRow>
+    </>
   )
 }
 
-function CtaPane({
+function CtaFields({
   brief,
   onChange,
 }: {
   brief: DemoBrief
   onChange: (next: DemoBrief) => void
 }) {
-  function patchCta(patch: Partial<DemoBrief['cta']>) {
-    onChange({ ...brief, cta: { ...brief.cta, ...patch } })
+  function patch(p: Partial<DemoBrief['cta']>) {
+    onChange({ ...brief, cta: { ...brief.cta, ...p } })
   }
   return (
-    <div>
-      <Field label="文案">
+    <>
+      <FieldRow label="文案">
         <input
           type="text"
           value={brief.cta.text}
-          onChange={(e) => patchCta({ text: e.target.value })}
+          onChange={(e) => patch({ text: e.target.value })}
           className={inputClass}
           data-testid="cta-text"
         />
-      </Field>
-      <Field label="Logo 位置">
+      </FieldRow>
+      <FieldRow label="Logo 位置">
         <SegmentedControl
           options={LOGO_PLACEMENTS}
           value={brief.cta.logoPlacement}
-          onChange={(logoPlacement) => patchCta({ logoPlacement })}
+          onChange={(logoPlacement) => patch({ logoPlacement })}
           testid="cta-logo-placement"
         />
-      </Field>
-    </div>
+      </FieldRow>
+    </>
   )
 }
-

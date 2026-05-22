@@ -5,31 +5,28 @@ import { Player } from '@remotion/player'
 import DemoComposition from '@/lib/demo/composition'
 import type { DemoBrandState, DemoBrief } from '@/lib/demo/types'
 import { DEMO_FPS, DEMO_DURATION_FRAMES, DEMO_CANVAS } from '@/lib/demo/defaults'
+import { RandomThemeButton } from './RandomThemeButton'
+import { BottomTimeline } from './BottomTimeline'
 
 interface Props {
   brand: DemoBrandState
   brief: DemoBrief
+  onBrandChange: (next: DemoBrandState) => void
 }
 
-export function CanvasStage({ brand, brief }: Props) {
+export function CanvasStage({ brand, brief, onBrandChange }: Props) {
   const inputProps = React.useMemo(() => ({ brand, brief }), [brand, brief])
   return (
-    <section
-      className="relative grid h-full w-full place-items-center overflow-hidden bg-canvas-surround transition-colors duration-200"
-      style={{ boxShadow: 'inset 0 0 0 1px var(--rk-border-soft)' }}
+    <main
+      className="flex h-full w-full flex-col items-center justify-center gap-4 overflow-hidden bg-canvas-surround p-6 transition-colors duration-200"
       data-testid="demo-stage"
     >
-      <span
-        aria-hidden
-        className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full border border-[color:rgba(168,85,247,0.4)] bg-[color:rgba(168,85,247,0.15)] px-2.5 py-1 font-mono text-[10px] text-primary"
-      >
-        ▢ inspector 跟随左侧 rail 选择
-      </span>
       <div
-        className="relative overflow-hidden rounded-lg"
+        className="relative shrink-0 overflow-hidden rounded-md"
         style={{
           aspectRatio: '9 / 16',
-          height: 'min(85%, 600px)',
+          height: 'min(100%, 540px)',
+          maxHeight: 540,
           background: 'var(--rk-canvas)',
           boxShadow: 'var(--rk-shadow-stage)',
         }}
@@ -52,6 +49,10 @@ export function CanvasStage({ brand, brief }: Props) {
           acknowledgeRemotionLicense
         />
       </div>
-    </section>
+
+      <RandomThemeButton brand={brand} onChange={onBrandChange} />
+
+      <BottomTimeline />
+    </main>
   )
 }

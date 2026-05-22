@@ -34,9 +34,14 @@ export interface DemoBrief {
   }
 }
 
-export type ContentTab = 'cover' | 'body' | 'cta'
+// L0 = browse layout (sidebar + stage only). L1 = expanded layout, the right
+// side panel reveals param sections + chat dock. Set by the TopBar toggle.
+export type DemoLayout = 'L0' | 'L1'
 
-// v0.2 inspector scope — what the right-side panel is editing right now.
-// Driven by the LeftRail. "brand" edits the brand kit; the three segment
-// scopes edit the corresponding brief region.
-export type InspectorScope = 'brand' | 'cover' | 'body' | 'cta'
+// One param section per `<details>` block in the right-side panel.
+export type ParamScope = 'brand' | 'cover' | 'body' | 'cta'
+
+// Agent chat dock state machine (one prompt per submit; no multi-turn history).
+export type AgentDockState = 'idle' | 'submitting' | 'streaming' | 'done' | 'error'
+
+export type LlmErrorCategory = 'AUTH' | 'QUOTA' | 'SYSTEM' | 'VALIDATION'
