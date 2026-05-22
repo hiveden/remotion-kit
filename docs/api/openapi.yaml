@@ -187,6 +187,90 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
 
+  /api/llm/raw:
+    post:
+      tags: [generate]
+      summary: Stateless LLM bridge — returns generated tsx text without writing to disk
+      description: |
+        Used by the ClientIndexedDBProvider (T22 Phase 3). Takes a prompt and
+        returns the assistant text + extracted tsx code block. The endpoint
+        does NOT touch the filesystem; the client persists the result itself
+        (typically in IndexedDB). No clip / brief / take state is created.
+
+        The optional `brief` body field is a minimal slice (aspect ratio,
+        publish platform, caption style, brand ref, references) that the
+        prompt builder consumes — there is no need to send a full ClipBrief.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scenePrompt, durationSeconds]
+              properties:
+                scenePrompt: { type: string, minLength: 1 }
+                durationSeconds: { type: number, exclusiveMinimum: 0, maximum: 60 }
+                cameraHint: { type: string }
+                brief:
+                  type: object
+                  description: 'Optional minimal slice used by the prompt builder. All fields are individually optional; missing fields fall back to DEFAULT_PROMPT_BRIEF.'
+                  properties:
+                    aspectRatio: { type: string, enum: ['9:16', '16:9', '1:1'] }
+                    publishPlatform: { type: string, enum: [youtube, douyin, bilibili, xiaohongshu, generic] }
+                    captionStyle: { type: string, enum: [subtle, bold, kinetic] }
+                    brandRef:
+                      oneOf:
+                        - { type: string }
+                        - { type: 'null' }
+                    references:
+                      type: array
+                      items: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Generated text + extracted code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, text, code, codeLength, provider, model, durationMs]
+                properties:
+                  ok: { type: boolean, enum: [true] }
+                  text: { type: string, description: 'Raw assistant text (includes the markdown code fence).' }
+                  code: { type: string, description: 'Extracted tsx body inside the fenced block.' }
+                  codeLength: { type: integer }
+                  provider: { type: string, enum: [openai] }
+                  model: { type: string }
+                  usage:
+                    oneOf:
+                      - { type: object, additionalProperties: true }
+                      - { type: 'null' }
+                  durationMs: { type: integer }
+        '400':
+          description: Malformed body
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: LLM authentication failure (AUTH_*)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Invalid request body or brief (VALIDATION_*)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: Rate limit / quota (QUOTA_EXCEEDED)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '500':
+          description: LLM gateway or extraction failure (SYSTEM_* / VALIDATION_EMPTY_RESPONSE / VALIDATION_NO_CODE_BLOCK)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   /api/clips/{id}/record:
     parameters:
       - $ref: '#/components/parameters/ClipId'
