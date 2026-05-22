@@ -19,7 +19,14 @@ export function DemoApp() {
   const [brand, setBrand] = React.useState<DemoBrandState>(DEFAULT_DEMO_BRAND)
   const [brief, setBrief] = React.useState<DemoBrief>(DEFAULT_DEMO_BRIEF)
   const dockRef = React.useRef<AgentDockHandle>(null)
-  const agent = useAgentGenerate({ brand, brief, dockRef })
+  const agent = useAgentGenerate({
+    brand,
+    brief,
+    dockRef,
+    // After a successful generate, collapse the side panel so it's obvious that
+    // AI now drives the canvas (Designer §3a / PM §5).
+    onGenerated: () => setLayout('L0'),
+  })
 
   return (
     <ThemeProvider>
@@ -30,7 +37,13 @@ export function DemoApp() {
         data-state="ready"
         data-layout={layout}
       >
-        <TopBar layout={layout} onLayoutChange={setLayout} templateLabel="brief 系列" />
+        <TopBar
+          layout={layout}
+          onLayoutChange={setLayout}
+          templateLabel="brief 系列"
+          aiGenerated={agent.aiGenerated}
+          onUndo={agent.undo}
+        />
         <main
           className="grid min-h-0 overflow-hidden transition-[grid-template-columns] duration-300"
           style={{
@@ -40,7 +53,13 @@ export function DemoApp() {
           data-testid="demo-main"
         >
           <LeftSidebar layout={layout} />
-          <CanvasStage brand={brand} brief={brief} onBrandChange={setBrand} />
+          <CanvasStage
+            brand={brand}
+            brief={brief}
+            onBrandChange={setBrand}
+            source={agent.source}
+            reloadKey={agent.reloadKey}
+          />
           <RightSidebar
             layout={layout}
             brand={brand}

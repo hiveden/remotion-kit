@@ -115,6 +115,7 @@ export const AgentChatDock = React.forwardRef<AgentDockHandle, Props>(function A
   }
 
   const hasStatus = internal.state !== 'idle'
+  const showPreConfirm = internal.state === 'idle' && prompt.trim().length > 0
 
   return (
     <section
@@ -132,7 +133,7 @@ export const AgentChatDock = React.forwardRef<AgentDockHandle, Props>(function A
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={locked}
-          placeholder="Ask AI 改 brief / 风格..."
+          placeholder="描述新版本（AI 会重写视觉，覆盖当前调参）"
           className="flex-1 rounded-md border border-border bg-input px-3 py-1.5 text-[12px] text-text-hi placeholder:text-text-lo focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
           data-testid="agent-dock-input"
           aria-label="Agent 输入框"
@@ -160,6 +161,15 @@ export const AgentChatDock = React.forwardRef<AgentDockHandle, Props>(function A
           </button>
         )}
       </div>
+      {showPreConfirm && (
+        <div
+          className="flex h-7 items-center gap-2 border-t border-border-soft px-3 text-[11px] text-text-md"
+          data-testid="agent-dock-pre-confirm"
+        >
+          <span aria-hidden>⚠</span>
+          <span>提交后右栏调参会被 AI 覆盖</span>
+        </div>
+      )}
       {hasStatus && (
         <div
           className="flex min-h-7 items-center gap-2 border-t border-border-soft px-3 py-1 text-[11px]"
@@ -169,14 +179,14 @@ export const AgentChatDock = React.forwardRef<AgentDockHandle, Props>(function A
           {internal.state === 'submitting' && (
             <>
               <Spinner className="h-3 w-3 text-primary" aria-hidden />
-              <span className="font-mono text-text-md">提交给 GPT-5.5…</span>
+              <span className="font-mono text-text-md">✨ AI 正在重写视觉…</span>
             </>
           )}
           {internal.state === 'streaming' && (
             <>
               <Spinner className="h-3 w-3 text-primary" aria-hidden />
               <span className="font-mono text-text-md">
-                ⏳ Streaming · {internal.startedAt ? ((Date.now() - internal.startedAt) / 1000).toFixed(1) : 0}s
+                ✨ AI 正在重写视觉 · {internal.startedAt ? ((Date.now() - internal.startedAt) / 1000).toFixed(1) : 0}s
               </span>
             </>
           )}
@@ -184,7 +194,7 @@ export const AgentChatDock = React.forwardRef<AgentDockHandle, Props>(function A
             <>
               <span aria-hidden>✓</span>
               <span className="font-mono text-text-md">
-                完成 · {(internal.finishedSec ?? 0).toFixed(1)}s
+                AI 已重写 · {(internal.finishedSec ?? 0).toFixed(1)}s
                 {internal.isMock && <span className="ml-1 text-text-lo">(mock)</span>}
               </span>
               <button

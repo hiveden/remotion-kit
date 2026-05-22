@@ -5,11 +5,10 @@ import type { DemoBrandState, DemoBrief } from '@/lib/demo/types'
 import type { AgentDockHandle } from './AgentChatDock'
 import { categorize } from './AgentChatDock'
 
-interface UseAgentGenerateArgs {
-  brand: DemoBrandState
-  brief: DemoBrief
-  dockRef: React.RefObject<AgentDockHandle | null>
-}
+export type CompositionSource = { kind: 'static' } | { kind: 'lazy'; clipId: string }
+
+const SESSION_CLIP_ID = 'demo-session'
+const DEMO_DURATION_SECONDS = 14
 
 interface GenerateResponse {
   ok?: true
@@ -23,11 +22,33 @@ interface ClipResponse {
   clip: { id: string }
 }
 
-const DEMO_DURATION_SECONDS = 14
+interface UseAgentGenerateArgs {
+  brand: DemoBrandState
+  brief: DemoBrief
+  dockRef: React.RefObject<AgentDockHandle | null>
+  onGenerated: () => void
+}
 
-// Map DemoBrief.subtitleStyle → ClipBrief.captionStyle. Both schemas use
-// `'classic' | 'bold' | 'lecture'` so this is identity, but keeping the map
-// explicit so a future schema drift doesn't silently break.
+interface Snapshot {
+  source: CompositionSource
+}
+
+interface State {
+  source: CompositionSource
+  reloadKey: number
+  snapshot: Snapshot | null
+  aiGenerated: boolean
+}
+
+export interface UseAgentGenerate {
+  source: CompositionSource
+  reloadKey: number
+  aiGenerated: boolean
+  submit: (prompt: string) => Promise<void>
+  cancel: () => void
+  undo: () => void
+}
+
 function buildScenePrompt(prompt: string, brand: DemoBrandState, brief: DemoBrief): string {
   return [
     `User intent: ${prompt}`,
@@ -35,33 +56,59 @@ function buildScenePrompt(prompt: string, brand: DemoBrandState, brief: DemoBrie
     `Cover: ${brief.cover.title} — ${brief.cover.subtitle}`,
     `Body: ${brief.body.title}`,
     `CTA: ${brief.cta.text}`,
-    `Metrics: ${brief.cover.metrics
-      .filter((m) => m.value || m.label)
-      .map((m) => `${m.value} ${m.label}`)
-      .join(', ') || 'none'}`,
+    `Metrics: ${
+      brief.cover.metrics
+        .filter((m) => m.value || m.label)
+        .map((m) => `${m.value} ${m.label}`)
+        .join(', ') || 'none'
+    }`,
   ].join('\n')
 }
 
-export function useAgentGenerate({ brand, brief, dockRef }: UseAgentGenerateArgs) {
-  const sessionClipIdRef = React.useRef<string | null>(null)
+export function useAgentGenerate({
+  brand,
+  brief,
+  dockRef,
+  onGenerated,
+}: UseAgentGenerateArgs): UseAgentGenerate {
+  const [state, setState] = React.useState<State>({
+    source: { kind: 'static' },
+    reloadKey: 0,
+    snapshot: null,
+    aiGenerated: false,
+  })
   const abortRef = React.useRef<AbortController | null>(null)
+  const sessionReadyRef = React.useRef<Promise<string> | null>(null)
+  const latestRef = React.useRef({ brand, brief })
+  React.useEffect(() => {
+    latestRef.current = { brand, brief }
+  }, [brand, brief])
 
-  async function ensureSessionClip(signal: AbortSignal): Promise<string> {
-    if (sessionClipIdRef.current) return sessionClipIdRef.current
-    const r = await fetch('/api/clips', {
-      method: 'POST',
-      signal,
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name: `demo-session-${Date.now()}` }),
-    })
-    if (!r.ok) {
-      const detail = (await r.json().catch(() => ({}))) as GenerateResponse
-      const code = detail.error?.code ?? `HTTP ${r.status}`
-      throw Object.assign(new Error(detail.error?.message ?? 'create clip failed'), { code })
-    }
-    const data = (await r.json()) as ClipResponse
-    sessionClipIdRef.current = data.clip.id
-    return data.clip.id
+  async function ensureSession(signal: AbortSignal): Promise<string> {
+    if (sessionReadyRef.current) return sessionReadyRef.current
+    sessionReadyRef.current = (async () => {
+      // POST is idempotent for fixed `demo-session` id (T20 backend contract).
+      const r = await fetch('/api/clips', {
+        method: 'POST',
+        signal,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: SESSION_CLIP_ID, name: 'Demo Session' }),
+      })
+      if (!r.ok && r.status !== 409) {
+        const detail = (await r.json().catch(() => ({}))) as GenerateResponse
+        const code = detail.error?.code ?? `HTTP ${r.status}`
+        sessionReadyRef.current = null
+        throw Object.assign(new Error(detail.error?.message ?? 'session ensure failed'), { code })
+      }
+      let data: ClipResponse | null = null
+      try {
+        data = (await r.json()) as ClipResponse
+      } catch {
+        /* 409 may have no body — fall through with fixed id */
+      }
+      return data?.clip?.id ?? SESSION_CLIP_ID
+    })()
+    return sessionReadyRef.current
   }
 
   async function submit(promptText: string) {
@@ -70,17 +117,19 @@ export function useAgentGenerate({ brand, brief, dockRef }: UseAgentGenerateArgs
     abortRef.current?.abort()
     const ac = new AbortController()
     abortRef.current = ac
-    const start = Date.now()
+    const startMs = Date.now()
+    const latest = latestRef.current
+    const snapshot: Snapshot = { source: state.source }
     dock.reportSubmit()
     try {
-      const clipId = await ensureSessionClip(ac.signal)
+      const clipId = await ensureSession(ac.signal)
       dock.reportStreaming()
       const r = await fetch(`/api/clips/${clipId}/generate`, {
         method: 'POST',
         signal: ac.signal,
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          scenePrompt: buildScenePrompt(promptText, brand, brief),
+          scenePrompt: buildScenePrompt(promptText, latest.brand, latest.brief),
           durationSeconds: DEMO_DURATION_SECONDS,
         }),
       })
@@ -94,9 +143,16 @@ export function useAgentGenerate({ brand, brief, dockRef }: UseAgentGenerateArgs
         })
         return
       }
-      const elapsed = (Date.now() - start) / 1000
+      const elapsed = (Date.now() - startMs) / 1000
       const isMock = (data.codeLength ?? 0) > 0 && elapsed < 1.5
+      setState((s) => ({
+        source: { kind: 'lazy', clipId },
+        reloadKey: s.reloadKey + 1,
+        snapshot,
+        aiGenerated: true,
+      }))
       dock.reportDone(elapsed, isMock)
+      onGenerated()
     } catch (e) {
       if (ac.signal.aborted) {
         dock.reportError({ category: 'SYSTEM', code: 'SYSTEM_CANCELLED', message: 'cancelled' })
@@ -112,5 +168,24 @@ export function useAgentGenerate({ brand, brief, dockRef }: UseAgentGenerateArgs
     abortRef.current?.abort()
   }
 
-  return { submit, cancel }
+  function undo() {
+    setState((s) => {
+      if (!s.snapshot) return s
+      return {
+        source: s.snapshot.source,
+        reloadKey: s.reloadKey + 1,
+        snapshot: null,
+        aiGenerated: false,
+      }
+    })
+  }
+
+  return {
+    source: state.source,
+    reloadKey: state.reloadKey,
+    aiGenerated: state.aiGenerated,
+    submit,
+    cancel,
+    undo,
+  }
 }

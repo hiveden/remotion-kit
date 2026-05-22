@@ -10,11 +10,13 @@ interface Props {
   layout: DemoLayout
   onLayoutChange: (next: DemoLayout) => void
   templateLabel: string
+  aiGenerated: boolean
+  onUndo: () => void
 }
 
 const REPO_URL = 'https://github.com/hiveden/remotion-kit'
 
-export function TopBar({ layout, onLayoutChange, templateLabel }: Props) {
+export function TopBar({ layout, onLayoutChange, templateLabel, aiGenerated, onUndo }: Props) {
   const { theme, toggle } = useTheme()
   return (
     <header
@@ -38,6 +40,24 @@ export function TopBar({ layout, onLayoutChange, templateLabel }: Props) {
         >
           当前模板：<span className="text-text-hi">{templateLabel}</span>
         </span>
+        {aiGenerated && (
+          <span
+            className="flex h-7 items-center gap-1.5 rounded-full border border-[color:rgba(168,85,247,0.35)] bg-[color:rgba(168,85,247,0.12)] pl-3 pr-1 font-mono text-[11px] text-primary"
+            data-testid="topbar-ai-generated-chip"
+          >
+            ✨ AI generated
+            <button
+              type="button"
+              onClick={onUndo}
+              className="rounded-full px-2 py-0.5 text-text-md transition-colors hover:bg-[color:rgba(168,85,247,0.18)] hover:text-text-hi"
+              data-testid="topbar-ai-undo"
+              aria-label="撤销 AI 生成"
+              title="撤销回调参前的版本"
+            >
+              ↩ 撤销
+            </button>
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
