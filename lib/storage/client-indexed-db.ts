@@ -1,26 +1,18 @@
 // lib/storage/client-indexed-db.ts
 //
-// Client-side StorageProvider — fully wires IndexedDB persistence and the
-// stateless /api/llm/raw endpoint, deferring only the esbuild-wasm + Blob URL
-// bundler step that needs the cross-browser spike from the v0.3 worktree.
+// Client-side StorageProvider — runs the full generate → persist → render
+// loop in the browser with zero server-side state.
 //
-// What this implementation actually does (today):
 //   - ensureSession() opens IndexedDB 'remotion-kit/v1', store 'compositions'
 //   - callGenerate(req) POSTs /api/llm/raw, persists { tsx, generatedAt, … }
 //     under the fixed 'client-session' key
-//   - composition(clipId) returns a factory that reads the stored tsx and
-//     throws STORAGE_BUNDLER_PENDING. <CompositionErrorBoundary> catches that
-//     and shows a graceful "switch to ?storage=server-fixed-session" panel.
+//   - composition(clipId) reads the stored tsx, runs it through the
+//     esbuild-wasm bundler (lib/storage/client-bundler.ts), and returns the
+//     evaluated React component so the Remotion Player can lazy-mount it.
 //
-// What's still gated by the v0.3 spike (storage-provider-interface §3.2):
-//   - esbuild-wasm bundling of the tsx → ESM
-//   - Browser import map / Blob URL for the bundle to import React + Remotion
-//     from the host page (option A in the spec)
-//   - Service-worker proxy fallback for browsers that can't resolve via the
-//     import map (option C)
-//
-// Everything except those three lives behind the StorageProvider interface
-// already, so the v0.3 worktree only needs to slot in the bundle step.
+// The bundler resolves bare imports (react, remotion, @remotion/player)
+// against window.__rkHostModules, which lib/storage/host-globals.ts registers
+// from the host page so we share the same React instance.
 
 import type {
   CompositionFactory,
@@ -29,6 +21,7 @@ import type {
   StorageProvider,
 } from './types'
 import { makeStorageError } from './types'
+import { evaluateBundle, transformTsx } from './client-bundler'
 
 const SESSION_CLIP_ID = 'client-session'
 const DB_NAME = 'remotion-kit'
@@ -196,12 +189,27 @@ export class ClientIndexedDBProvider implements StorageProvider {
           `No composition stored for clip ${clipId}; run generate first.`,
         )
       }
-      throw makeStorageError(
-        'STORAGE_BUNDLER_PENDING',
-        'ClientIndexedDB stored ' +
-          `${stored.codeLength} chars of generated tsx, but the v0.3 esbuild-wasm bundler isn't shipped yet. ` +
-          'Switch to ?storage=server-fixed-session to render the LLM output today.',
-      )
+      let code: string
+      try {
+        code = await transformTsx(stored.tsx)
+      } catch (e) {
+        throw makeStorageError(
+          'STORAGE_BUNDLE_FAILED',
+          e instanceof Error ? e.message : String(e),
+          { cause: e },
+        )
+      }
+      let Component
+      try {
+        Component = evaluateBundle(code)
+      } catch (e) {
+        throw makeStorageError(
+          'STORAGE_BUNDLE_EVAL_FAILED',
+          e instanceof Error ? e.message : String(e),
+          { cause: e },
+        )
+      }
+      return { default: Component }
     }
   }
 

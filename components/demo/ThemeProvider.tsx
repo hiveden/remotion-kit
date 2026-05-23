@@ -1,6 +1,9 @@
 'use client'
 
 import React from 'react'
+// Side-effect import: registers React / Remotion on window.__rkHostModules so
+// the ClientIndexedDB provider's runtime bundler can resolve them at eval time.
+import '@/lib/storage/host-globals'
 
 export type Theme = 'light' | 'dark'
 
