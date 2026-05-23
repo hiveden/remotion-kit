@@ -1,14 +1,17 @@
 // lib/storage/client-bundler.ts
 //
-// Runtime tsx → JS bundler for the ClientIndexedDB provider. Pulls
-// esbuild-wasm in lazily (once per session), uses CommonJS output so we can
-// load the result via `new Function('module','exports','require',code)`
-// instead of fighting Blob URL `import()` cross-browser quirks. External
-// dependencies (react / remotion / @remotion/*) are resolved at runtime by
-// looking up window globals that we register from a shared host module
-// (see lib/storage/host-globals.ts).
+// Runtime tsx → JS bundler for the ClientIndexedDB provider. Uses sucrase
+// (pure JS, no wasm, no worker) so transform is synchronous and side-steps
+// the esbuild-wasm initialize() hang we saw when the bundler runs inside
+// the Remotion Player render cycle.
+//
+// Output is CJS — we load it via `new Function('module','exports','require',
+// code)` (which requires CSP `script-src 'unsafe-eval'`). External
+// dependencies (react / remotion / @remotion/*) are resolved at runtime
+// against window.__rkHostModules registered by lib/storage/host-globals.ts.
 
 import * as React from 'react'
+import { transform as sucraseTransform } from 'sucrase'
 
 declare global {
   interface Window {
@@ -16,50 +19,27 @@ declare global {
   }
 }
 
-type EsbuildModule = typeof import('esbuild-wasm')
-
-let esbuildPromise: Promise<EsbuildModule> | null = null
-
-async function loadEsbuild(): Promise<EsbuildModule> {
-  if (!esbuildPromise) {
-    esbuildPromise = (async () => {
-      const esbuild = (await import('esbuild-wasm')) as unknown as EsbuildModule
-      // esbuild-wasm requires initialize() once per page; subsequent calls
-      // throw, so we swallow the "already initialized" path defensively.
-      try {
-        await esbuild.initialize({
-          // The wasm asset is fetched from the CDN to avoid bundling the
-          // 3 MB blob into the main Next.js client bundle.
-          wasmURL: 'https://unpkg.com/esbuild-wasm@0.28.0/esbuild.wasm',
-        })
-      } catch (e) {
-        // "initialize() called more than once" → fine, keep going.
-        const msg = e instanceof Error ? e.message : String(e)
-        if (!/already initialized|more than once/i.test(msg)) {
-          throw e
-        }
-      }
-      return esbuild
-    })()
-  }
-  return esbuildPromise
+/**
+ * Eager-load hook kept for backwards compat with host-globals warm-up.
+ * Sucrase is synchronous and self-contained so this is effectively a no-op,
+ * but we keep the signature so existing call sites don't break.
+ */
+export function ensureBundlerReady(): Promise<void> {
+  return Promise.resolve()
 }
 
 /**
- * Compile tsx → CJS JavaScript and return a string that can be eval'd via
- * `new Function('module','exports','require',code)`. Throws with a clear
- * message if the compile fails.
+ * Transform tsx → CommonJS JS string. Throws with a sucrase-formatted
+ * SyntaxError on parse failure. Synchronous internally; the async signature
+ * lets callers swap in a wasm-backed transform later without rewrites.
  */
 export async function transformTsx(tsx: string): Promise<string> {
-  const esbuild = await loadEsbuild()
-  const result = await esbuild.transform(tsx, {
-    loader: 'tsx',
-    format: 'cjs',
-    target: 'es2020',
-    jsx: 'transform',
-    jsxFactory: 'React.createElement',
-    jsxFragment: 'React.Fragment',
-    sourcemap: false,
+  const result = sucraseTransform(tsx, {
+    transforms: ['typescript', 'jsx', 'imports'],
+    jsxRuntime: 'classic',
+    jsxPragma: 'React.createElement',
+    jsxFragmentPragma: 'React.Fragment',
+    production: true,
   })
   return result.code
 }
@@ -77,8 +57,6 @@ function makeRequire(): (name: string) => unknown {
   return (name: string) => {
     const hit = hostModules[name]
     if (hit !== undefined) return hit
-    // Fallback for the React jsx-runtime path some LLMs emit when the auto
-    // transform is requested; map both legacy and modern to our React.
     if (name === 'react/jsx-runtime' || name === 'react/jsx-dev-runtime') {
       const r = hostModules['react'] as typeof React | undefined
       if (r) {
@@ -113,13 +91,14 @@ interface EvaluatedModule {
 
 /**
  * Evaluate a transformed CJS bundle and return its default export, which is
- * the React component the Player will mount.
+ * the React component the Player will mount. Wraps the result so render-time
+ * errors propagate to the React ErrorBoundary instead of silently producing
+ * an empty Player canvas (PM red-line: no silent fallback).
  */
 export function evaluateBundle(code: string): React.ComponentType<Record<string, unknown>> {
   const moduleObj: { exports: EvaluatedModule } = { exports: {} }
   const exportsObj: EvaluatedModule = moduleObj.exports
   const require = makeRequire()
-  // Wrap in IIFE-like new Function so module/exports/require/React are scoped.
   const fn = new Function(
     'module',
     'exports',
@@ -140,5 +119,14 @@ export function evaluateBundle(code: string): React.ComponentType<Record<string,
   if (typeof Component !== 'function') {
     throw new Error('Bundle has no default export (expected React component)')
   }
-  return Component
+  const Wrapped: React.ComponentType<Record<string, unknown>> = (props) => {
+    try {
+      return React.createElement(Component, props)
+    } catch (e) {
+      console.error('[rk-bundler] Component render threw:', e)
+      throw e
+    }
+  }
+  Wrapped.displayName = `RkBundled(${Component.displayName ?? Component.name ?? 'anonymous'})`
+  return Wrapped
 }

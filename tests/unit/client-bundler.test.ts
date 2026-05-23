@@ -29,7 +29,7 @@ describe('client-bundler: evaluateBundle', () => {
     ].join('\n')
     const Component = evaluateBundle(code)
     expect(typeof Component).toBe('function')
-    expect((Component as { name: string }).name).toBe('Hello')
+    expect((Component as { displayName?: string }).displayName).toBe('RkBundled(Hello)')
   })
 
   it('falls back to module.exports when there is no `default` key', () => {

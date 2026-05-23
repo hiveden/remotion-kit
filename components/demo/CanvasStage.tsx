@@ -71,7 +71,9 @@ export function CanvasStage({ brand, brief, onRoll, source, reloadKey }: Props) 
   }, [source, provider])
 
   // `key` bump on reloadKey forces React to remount the <Player>, which clears
-  // the module cache and re-evaluates lazyComponent.
+  // the module cache and re-evaluates lazyComponent. The boundary AND the
+  // Player both need the key so React's reconciler can't reuse a stale Player
+  // instance across the static→lazy switch.
   const playerKey = `${source.kind}:${source.kind === 'lazy' ? source.clipId : 'static'}:${reloadKey}`
 
   return (
@@ -99,6 +101,7 @@ export function CanvasStage({ brand, brief, onRoll, source, reloadKey }: Props) 
         >
           {source.kind === 'static' ? (
             <Player
+              key={playerKey}
               component={DemoComposition}
               inputProps={inputProps}
               durationInFrames={DEMO_DURATION_FRAMES}
@@ -116,6 +119,7 @@ export function CanvasStage({ brand, brief, onRoll, source, reloadKey }: Props) 
             />
           ) : (
             <Player
+              key={playerKey}
               lazyComponent={lazyComponent!}
               inputProps={inputProps}
               durationInFrames={DEMO_DURATION_FRAMES}

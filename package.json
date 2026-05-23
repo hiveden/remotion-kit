@@ -23,12 +23,12 @@
     "@remotion/cli": "4.0.438",
     "@remotion/layout-utils": "^4.0.464",
     "@remotion/player": "4.0.438",
-    "esbuild-wasm": "^0.28.0",
     "next": "16.0.0-beta.0",
     "openai": "^5.0.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "remotion": "4.0.438",
+    "sucrase": "^3.35.1",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.9.0"
   },
