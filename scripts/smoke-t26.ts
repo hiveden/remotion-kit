@@ -254,6 +254,30 @@ async function snapStats(page: Page): Promise<{
   })
 }
 
+async function waitForHelloVisible(page: Page): Promise<{ opacity: string | null; color: string | null }> {
+  const handle = await page.waitForFunction(
+    () => {
+      const hello = Array.from(document.querySelectorAll('[data-testid="demo-player"] *')).find(
+        (node): node is HTMLElement =>
+          node instanceof HTMLElement &&
+          node.children.length === 0 &&
+          node.textContent?.trim() === 'HELLO',
+      )
+      if (!hello) return false
+      const style = getComputedStyle(hello)
+      const rect = hello.getBoundingClientRect()
+      const opacity = Number.parseFloat(style.opacity || '0')
+      if (opacity <= 0.5 || rect.width <= 0 || rect.height <= 0) return false
+      return {
+        opacity: style.opacity,
+        color: style.color,
+      }
+    },
+    { timeout: 3_000 },
+  )
+  return (await handle.jsonValue()) as { opacity: string | null; color: string | null }
+}
+
 async function runMode(mode: ModeConfig): Promise<void> {
   console.log(`\n===== mode: ${mode.label} =====`)
   if (mode.seed === 'server') {
@@ -321,6 +345,8 @@ async function runMode(mode: ModeConfig): Promise<void> {
   }
   if (s.source !== 'lazy') throw new Error(`expected source=lazy after reload, got ${s.source}`)
   if (s.descendants < 20) throw new Error(`expected >20 player descendants, got ${s.descendants}`)
+  const visual = await waitForHelloVisible(page)
+  console.log(`  visual:   HELLO opacity=${visual.opacity} color=${visual.color}`)
 
   // Snapshot the Player canvas and assert the rendered content is actually
   // visible (PM red-line #12: headed mid-frame pixel evidence required).
@@ -333,9 +359,9 @@ async function runMode(mode: ModeConfig): Promise<void> {
   console.log(
     `  pixel:    nonBlack=${visible.nonBlack.toFixed(2)}% bright=${visible.bright.toFixed(2)}%`,
   )
-  if (visible.bright < 1) {
+  if (visible.nonBlack < 5) {
     throw new Error(
-      `restored Player is visually blank — bright pixel ratio ${visible.bright.toFixed(2)}% < 1%`,
+      `restored Player is visually blank — nonBlack=${visible.nonBlack.toFixed(2)}% < 5%`,
     )
   }
 
