@@ -65,7 +65,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
   let record: PersistedRecord
   try {
     record = JSON.parse(raw) as PersistedRecord
-  } catch (e) {
+  } catch {
     // Malformed record file — treat as "does not exist" so the client can
     // proceed with a fresh session rather than blocking on parse errors.
     return json({ exists: false })
