@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import type { DemoBrandState, DemoBrief, DemoLayout } from '@/lib/demo/types'
+import type { DemoBrandState, DemoBrief, DemoLayout, ParamScope } from '@/lib/demo/types'
 import { DEFAULT_DEMO_BRAND, DEFAULT_DEMO_BRIEF } from '@/lib/demo/defaults'
 import { ThemeProvider } from './ThemeProvider'
 import { TopBar } from './TopBar'
@@ -23,6 +23,7 @@ export function DemoApp() {
   const [railMode, setRailMode] = React.useState<RailMode>('templates')
   const [brand, setBrand] = React.useState<DemoBrandState>(DEFAULT_DEMO_BRAND)
   const [brief, setBrief] = React.useState<DemoBrief>(DEFAULT_DEMO_BRIEF)
+  const [activeScope, setActiveScope] = React.useState<ParamScope | null>(null)
   const dockRef = React.useRef<AgentDockHandle>(null)
   const agent = useAgentGenerate({
     brand,
@@ -30,6 +31,11 @@ export function DemoApp() {
     dockRef,
     onGenerated: () => setLayout('L0'),
   })
+
+  function jumpToScope(scope: 'cover' | 'body' | 'cta') {
+    setLayout('L1')
+    setActiveScope(scope)
+  }
 
   const sidebarWidth = railMode === 'templates' ? SIDEBAR : 0
   const rightWidth = layout === 'L1' ? RIGHT : 0
@@ -83,9 +89,14 @@ export function DemoApp() {
             onAgentSubmit={agent.submit}
             onAgentCancel={agent.cancel}
             dockRef={dockRef}
+            activeScope={activeScope}
+            onActiveScopeHandled={() => setActiveScope(null)}
           />
         </main>
-        <BottomTimeline />
+        <BottomTimeline
+          activeScope={activeScope === 'brand' ? null : activeScope}
+          onSegmentClick={jumpToScope}
+        />
         {/* Right-pane toggle handle: floats on the seam between Stage and the
             right column. When collapsed (L0, rightWidth=0) it sits on the
             viewport right edge; when expanded (L1) it sits 14px to the left

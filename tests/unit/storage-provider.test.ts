@@ -119,10 +119,33 @@ describe('storage: ServerFixedSessionProvider', () => {
   })
 })
 
-describe('storage: ClientIndexedDBProvider stub', () => {
-  it('throws STORAGE_NOT_IMPLEMENTED on ensureSession', async () => {
+describe('storage: ClientIndexedDBProvider', () => {
+  // jsdom doesn't ship IndexedDB; ensureSession throws
+  // STORAGE_INDEXEDDB_UNAVAILABLE in that environment, which is the
+  // correct behavior. Real browsers (Chromium / Safari / Firefox) supply
+  // the actual API.
+  it('rejects with STORAGE_INDEXEDDB_UNAVAILABLE when IndexedDB is missing', async () => {
     const { ClientIndexedDBProvider } = await import('@/lib/storage/client-indexed-db')
     const p = new ClientIndexedDBProvider()
-    await expect(p.ensureSession()).rejects.toMatchObject({ code: 'STORAGE_NOT_IMPLEMENTED' })
+    await expect(p.ensureSession()).rejects.toMatchObject({
+      code: 'STORAGE_INDEXEDDB_UNAVAILABLE',
+    })
+  })
+
+  it('composition factory rejects when no entry is stored', async () => {
+    const { ClientIndexedDBProvider } = await import('@/lib/storage/client-indexed-db')
+    const p = new ClientIndexedDBProvider()
+    const factory = p.composition('client-session')
+    expect(typeof factory).toBe('function')
+    // Without IndexedDB the factory fails at the db-open step.
+    await expect(factory()).rejects.toMatchObject({
+      code: 'STORAGE_INDEXEDDB_UNAVAILABLE',
+    })
+  })
+
+  it('mode field is client-indexed-db', async () => {
+    const { ClientIndexedDBProvider } = await import('@/lib/storage/client-indexed-db')
+    const p = new ClientIndexedDBProvider()
+    expect(p.mode).toBe('client-indexed-db')
   })
 })

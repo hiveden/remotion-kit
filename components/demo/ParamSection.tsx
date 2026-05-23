@@ -24,6 +24,8 @@ interface Props {
   onBrandChange: (next: DemoBrandState) => void
   onBriefChange: (next: DemoBrief) => void
   defaultOpen?: boolean
+  highlighted?: boolean
+  anchorRef?: (el: HTMLElement | null) => void
 }
 
 const SCOPE_LABEL: Record<ParamScope, string> = {
@@ -203,13 +205,25 @@ export function ParamSection({
   onBrandChange,
   onBriefChange,
   defaultOpen = true,
+  highlighted = false,
+  anchorRef,
 }: Props) {
   const [open, setOpen] = React.useState(defaultOpen)
+  // When highlighted (jumped from timeline), force the section open so the
+  // user can immediately see the params for that segment.
+  React.useEffect(() => {
+    if (highlighted) setOpen(true)
+  }, [highlighted])
   return (
     <section
-      className="border-b border-border last:border-b-0"
+      ref={anchorRef as React.Ref<HTMLElement>}
+      className={
+        'border-b border-border last:border-b-0 transition-colors duration-200 ' +
+        (highlighted ? 'bg-[color:rgba(168,85,247,0.05)]' : '')
+      }
       data-testid={`param-section-${scope}`}
       data-state={open ? 'expanded' : 'collapsed'}
+      data-highlighted={highlighted ? 'true' : 'false'}
     >
       <button
         type="button"

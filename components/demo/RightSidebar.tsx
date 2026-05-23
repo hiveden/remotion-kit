@@ -15,6 +15,8 @@ interface Props {
   onAgentSubmit: (prompt: string) => Promise<void>
   onAgentCancel: () => void
   dockRef: React.RefObject<AgentDockHandle | null>
+  activeScope: ParamScope | null
+  onActiveScopeHandled: () => void
 }
 
 const SCOPES: readonly ParamScope[] = ['brand', 'cover', 'body', 'cta']
@@ -28,8 +30,22 @@ export function RightSidebar({
   onAgentSubmit,
   onAgentCancel,
   dockRef,
+  activeScope,
+  onActiveScopeHandled,
 }: Props) {
   const open = layout === 'L1'
+  const scopeRefs = React.useRef<Partial<Record<ParamScope, HTMLElement | null>>>({})
+
+  // Scroll the active section into view when activeScope changes.
+  React.useEffect(() => {
+    if (!open || !activeScope) return
+    const el = scopeRefs.current[activeScope]
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    onActiveScopeHandled()
+  }, [open, activeScope, onActiveScopeHandled])
+
   return (
     <aside
       className="flex h-full flex-col overflow-hidden border-l border-border bg-panel transition-[opacity] duration-300"
@@ -49,6 +65,10 @@ export function RightSidebar({
             brief={brief}
             onBrandChange={onBrandChange}
             onBriefChange={onBriefChange}
+            highlighted={activeScope === scope}
+            anchorRef={(el) => {
+              scopeRefs.current[scope] = el
+            }}
           />
         ))}
       </div>
