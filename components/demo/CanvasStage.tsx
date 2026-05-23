@@ -11,7 +11,7 @@ import { RandomThemeButton } from './RandomThemeButton'
 interface Props {
   brand: DemoBrandState
   brief: DemoBrief
-  onBrandChange: (next: DemoBrandState) => void
+  onRoll: (next: { brand: DemoBrandState; brief: DemoBrief }) => void
   /**
    * "static" → render <DemoComposition> directly (state-driven preview).
    * "lazy:<clipId>" → load LLM-generated Composition from
@@ -60,7 +60,7 @@ class CompositionErrorBoundary extends React.Component<
   }
 }
 
-export function CanvasStage({ brand, brief, onBrandChange, source, reloadKey }: Props) {
+export function CanvasStage({ brand, brief, onRoll, source, reloadKey }: Props) {
   const inputProps = React.useMemo(() => ({ brand, brief }), [brand, brief])
   const provider = useStorageProvider()
 
@@ -135,7 +135,7 @@ export function CanvasStage({ brand, brief, onBrandChange, source, reloadKey }: 
         </CompositionErrorBoundary>
       </div>
 
-      <RandomThemeButton brand={brand} onChange={onBrandChange} />
+      <RandomThemeButton brand={brand} brief={brief} onChange={onRoll} />
     </main>
   )
 }

@@ -67,7 +67,10 @@ export function DemoApp() {
           <CanvasStage
             brand={brand}
             brief={brief}
-            onBrandChange={setBrand}
+            onRoll={(next) => {
+              setBrand(next.brand)
+              setBrief(next.brief)
+            }}
             source={agent.source}
             reloadKey={agent.reloadKey}
           />

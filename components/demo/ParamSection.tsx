@@ -109,6 +109,93 @@ function VariantPicker({
   )
 }
 
+function ElementControls({
+  scope,
+  brief,
+  onChange,
+}: {
+  scope: SegmentRole
+  brief: DemoBrief
+  onChange: (next: DemoBrief) => void
+}) {
+  const registry = registryFor(scope)
+  const variantId = brief.componentType?.[scope] ?? registry.defaultEntryId() ?? ''
+  const entry = registry.lookup(variantId)
+  if (!entry) return null
+  const defaults = entry.metadata.elementsDefaults
+  const overrides = brief.elements?.[scope] ?? {}
+  function setElement(key: string, value: unknown) {
+    const nextElements = {
+      ...brief.elements,
+      [scope]: { ...overrides, [key]: value },
+    }
+    onChange({ ...brief, elements: nextElements })
+  }
+  return (
+    <>
+      {entry.metadata.elementsSchema.map((field) => {
+        const value = overrides[field.key] ?? defaults[field.key]
+        if (field.kind === 'boolean') {
+          return (
+            <FieldRow key={field.key} label={field.label}>
+              <label className="flex items-center gap-2 text-[11px] text-text-md">
+                <input
+                  type="checkbox"
+                  checked={Boolean(value)}
+                  onChange={(e) => setElement(field.key, e.target.checked)}
+                  className="h-4 w-4 accent-primary"
+                  data-testid={`${scope}-element-${field.key}`}
+                />
+                <span>{value ? '开' : '关'}</span>
+              </label>
+            </FieldRow>
+          )
+        }
+        if (field.kind === 'number') {
+          const min = field.min ?? 0
+          const max = field.max ?? 100
+          return (
+            <FieldRow key={field.key} label={field.label} hint={`${min}-${max}`}>
+              <input
+                type="number"
+                value={typeof value === 'number' ? value : Number(value ?? min)}
+                min={min}
+                max={max}
+                onChange={(e) => {
+                  const n = Number(e.target.value)
+                  if (Number.isFinite(n)) setElement(field.key, Math.max(min, Math.min(max, n)))
+                }}
+                className={inputClass}
+                data-testid={`${scope}-element-${field.key}`}
+              />
+            </FieldRow>
+          )
+        }
+        if (field.kind === 'enum' || field.kind === 'font-preset') {
+          const opts = field.enumValues ?? []
+          return (
+            <FieldRow key={field.key} label={field.label}>
+              <select
+                value={String(value ?? opts[0] ?? '')}
+                onChange={(e) => setElement(field.key, e.target.value)}
+                className={inputClass}
+                data-testid={`${scope}-element-${field.key}`}
+              >
+                {opts.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </FieldRow>
+          )
+        }
+        return null
+      })}
+    </>
+  )
+}
+
 export function ParamSection({
   scope,
   brand,
@@ -244,6 +331,7 @@ function CoverFields({
   return (
     <>
       <VariantPicker scope="cover" brief={brief} onChange={onChange} />
+      <ElementControls scope="cover" brief={brief} onChange={onChange} />
       <FieldRow label="标题">
         <textarea
           rows={2}
@@ -294,6 +382,7 @@ function BodyFields({
   return (
     <>
       <VariantPicker scope="body" brief={brief} onChange={onChange} />
+      <ElementControls scope="body" brief={brief} onChange={onChange} />
       <FieldRow label="段标题">
         <input
           type="text"
@@ -328,6 +417,7 @@ function CtaFields({
   return (
     <>
       <VariantPicker scope="cta" brief={brief} onChange={onChange} />
+      <ElementControls scope="cta" brief={brief} onChange={onChange} />
       <FieldRow label="文案">
         <input
           type="text"
