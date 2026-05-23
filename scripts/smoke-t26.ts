@@ -12,6 +12,7 @@
 import { chromium, type BrowserContext, type Page } from 'playwright'
 import { mkdir, writeFile, rm } from 'node:fs/promises'
 import path from 'node:path'
+import { inflateSync } from 'node:zlib'
 
 const FIXTURE_TSX = `import React from 'react'
 import { AbsoluteFill, useCurrentFrame, interpolate } from 'remotion'
@@ -58,6 +59,101 @@ const MODES: ModeConfig[] = [
 ]
 
 const WORKSPACE_ROOT = path.resolve(import.meta.dirname, '..', '.workspace', 'clips')
+
+function readUInt32(buf: Buffer, offset: number): number {
+  return buf.readUInt32BE(offset)
+}
+
+type ByteArray = Uint8Array<ArrayBufferLike>
+
+function unfilterScanline(
+  filter: number,
+  current: ByteArray,
+  previous: ByteArray,
+  bytesPerPixel: number,
+): ByteArray {
+  const out = new Uint8Array(current.length)
+  for (let i = 0; i < current.length; i += 1) {
+    const left = i >= bytesPerPixel ? out[i - bytesPerPixel]! : 0
+    const up = previous[i] ?? 0
+    const upLeft = i >= bytesPerPixel ? previous[i - bytesPerPixel]! : 0
+    if (filter === 0) out[i] = current[i]!
+    else if (filter === 1) out[i] = (current[i]! + left) & 0xff
+    else if (filter === 2) out[i] = (current[i]! + up) & 0xff
+    else if (filter === 3) out[i] = (current[i]! + Math.floor((left + up) / 2)) & 0xff
+    else if (filter === 4) {
+      const p = left + up - upLeft
+      const pa = Math.abs(p - left)
+      const pb = Math.abs(p - up)
+      const pc = Math.abs(p - upLeft)
+      const predictor = pa <= pb && pa <= pc ? left : pb <= pc ? up : upLeft
+      out[i] = (current[i]! + predictor) & 0xff
+    } else {
+      throw new Error(`unsupported PNG filter ${filter}`)
+    }
+  }
+  return out
+}
+
+async function pixelVisibility(png: Buffer): Promise<{ nonBlack: number; bright: number }> {
+  const signature = png.subarray(0, 8).toString('hex')
+  if (signature !== '89504e470d0a1a0a') throw new Error('expected PNG screenshot')
+
+  let width = 0
+  let height = 0
+  let bitDepth = 0
+  let colorType = 0
+  const idat: Buffer[] = []
+  let offset = 8
+  while (offset < png.length) {
+    const length = readUInt32(png, offset)
+    const type = png.subarray(offset + 4, offset + 8).toString('ascii')
+    const data = png.subarray(offset + 8, offset + 8 + length)
+    if (type === 'IHDR') {
+      width = readUInt32(data, 0)
+      height = readUInt32(data, 4)
+      bitDepth = data[8]!
+      colorType = data[9]!
+    } else if (type === 'IDAT') {
+      idat.push(Buffer.from(data))
+    } else if (type === 'IEND') {
+      break
+    }
+    offset += 12 + length
+  }
+  if (bitDepth !== 8 || (colorType !== 2 && colorType !== 6)) {
+    throw new Error(`unsupported PNG format bitDepth=${bitDepth} colorType=${colorType}`)
+  }
+  const channels = colorType === 6 ? 4 : 3
+  const bytesPerPixel = channels
+  const rowBytes = width * channels
+  const raw = inflateSync(Buffer.concat(idat))
+  let rawOffset = 0
+  let previous: ByteArray = new Uint8Array(rowBytes)
+  let nonBlack = 0
+  let bright = 0
+  const total = width * height
+  for (let y = 0; y < height; y += 1) {
+    const filter = raw[rawOffset]!
+    rawOffset += 1
+    const current = raw.subarray(rawOffset, rawOffset + rowBytes)
+    rawOffset += rowBytes
+    const row = unfilterScanline(filter, current, previous, bytesPerPixel)
+    previous = row
+    for (let x = 0; x < width; x += 1) {
+      const i = x * channels
+      const r = row[i]!
+      const g = row[i + 1]!
+      const b = row[i + 2]!
+      if (r > 8 || g > 8 || b > 8) nonBlack += 1
+      if (r > 180 && g > 180 && b > 180) bright += 1
+    }
+  }
+  return {
+    nonBlack: (nonBlack / total) * 100,
+    bright: (bright / total) * 100,
+  }
+}
 
 async function seedServerFixture(clipId: string): Promise<void> {
   const clipDir = path.join(WORKSPACE_ROOT, clipId)
@@ -166,7 +262,7 @@ async function runMode(mode: ModeConfig): Promise<void> {
     // real /api/clips/:id/generate calls the real LLM (90s).
     await seedServerFixture('demo-session')
   }
-  const browser = await chromium.launch({ headless: true })
+  const browser = await chromium.launch({ headless: process.env.HEADLESS !== '0' })
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   await installLlmMock(ctx)
   const page = await ctx.newPage()
@@ -226,17 +322,22 @@ async function runMode(mode: ModeConfig): Promise<void> {
   if (s.source !== 'lazy') throw new Error(`expected source=lazy after reload, got ${s.source}`)
   if (s.descendants < 20) throw new Error(`expected >20 player descendants, got ${s.descendants}`)
 
-  // Scrub to a mid-frame and snapshot.
-  await page.evaluate(() => {
-    const scrubber = document.querySelector('[data-testid="demo-player"] input[type="range"]') as HTMLInputElement | null
-    if (!scrubber) return
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
-    setter?.call(scrubber, '60')
-    scrubber.dispatchEvent(new Event('input', { bubbles: true }))
-    scrubber.dispatchEvent(new Event('change', { bubbles: true }))
+  // Snapshot the Player canvas and assert the rendered content is actually
+  // visible (PM red-line #12: headed mid-frame pixel evidence required).
+  // `initialFrame={RESTORED_INITIAL_FRAME}` on the restored Player skips
+  // past the spring cold-open so we don't depend on headless autoplay.
+  const playerBuf = await page.locator('[data-testid="demo-player"]').screenshot({
+    path: `/tmp/rk-t26-${mode.label}-02-restored.png`,
   })
-  await page.waitForTimeout(1500)
-  await page.screenshot({ path: `/tmp/rk-t26-${mode.label}-02-restored.png` })
+  const visible = await pixelVisibility(playerBuf)
+  console.log(
+    `  pixel:    nonBlack=${visible.nonBlack.toFixed(2)}% bright=${visible.bright.toFixed(2)}%`,
+  )
+  if (visible.bright < 1) {
+    throw new Error(
+      `restored Player is visually blank — bright pixel ratio ${visible.bright.toFixed(2)}% < 1%`,
+    )
+  }
 
   // Phase 3: reset → verify back to static
   await page.evaluate(() => {
@@ -258,7 +359,14 @@ async function runMode(mode: ModeConfig): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  for (const mode of MODES) {
+  const modeFilter = process.env.SMOKE_MODE
+  const modes = modeFilter ? MODES.filter((mode) => mode.label === modeFilter) : MODES
+  if (modes.length === 0) {
+    throw new Error(`unknown SMOKE_MODE=${modeFilter}`)
+  }
+  if (process.env.SMOKE_MODE) console.log(`SMOKE_MODE=${process.env.SMOKE_MODE}`)
+  if (process.env.HEADLESS === '0') console.log('HEADLESS=0 (headed Chromium)')
+  for (const mode of modes) {
     try {
       await runMode(mode)
     } catch (e) {

@@ -98,9 +98,11 @@ export function useAgentGenerate({
   // existing composition and auto-restore source=lazy if one is found. The
   // peek is lightweight (IDB row meta or HEAD-ish exists endpoint) — it
   // never loads the full tsx or triggers ensureSession side effects.
-  // We don't bump reloadKey here: the initial mount isn't a "reload" from
-  // the Player's perspective, and bumping forced an extra remount race
-  // (Block 6 lesson).
+  // Bump reloadKey on restore (Architect spec v0.2-redo §3, hotfix
+  // 2026-05-23 17:58): any `static → lazy` transition must bump so the
+  // Player's playerKey changes, even though source.kind / clipId already
+  // differ. Redundant safety net — keeps the rule uniform across all
+  // generate / restore / mode-switch paths.
   const peekStartedRef = React.useRef(false)
   React.useEffect(() => {
     if (!provider) return
@@ -117,6 +119,7 @@ export function useAgentGenerate({
           setState((s) => ({
             ...s,
             source: { kind: 'lazy', clipId },
+            reloadKey: s.reloadKey + 1,
             // snapshot the static default so `undo()` can restore it without
             // touching the persisted entry.
             snapshot: { source: { kind: 'static' } },

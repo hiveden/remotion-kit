@@ -86,6 +86,7 @@ export function DemoApp() {
             source={agent.source}
             reloadKey={agent.reloadKey}
             restoring={agent.restoring}
+            aiGenerated={agent.aiGenerated}
           />
           <RightSidebar
             layout={layout}

@@ -26,6 +26,14 @@ interface Props {
    * see a `default → restored` flash.
    */
   restoring?: boolean
+  /**
+   * When `restored`, the user just reloaded the page and the LLM output was
+   * auto-loaded from persistent storage. We pass `initialFrame > 0` so the
+   * Player starts past any cold-open fade-in — headless / no-gesture
+   * environments block autoplay, so a frame-0 Player would render an
+   * invisible (opacity-zero) Composition until the user clicks.
+   */
+  aiGenerated?: false | 'fresh' | 'restored'
 }
 
 class CompositionErrorBoundary extends React.Component<
@@ -66,7 +74,20 @@ class CompositionErrorBoundary extends React.Component<
   }
 }
 
-export function CanvasStage({ brand, brief, onRoll, source, reloadKey, restoring = false }: Props) {
+// Restored Player skips ~1s into the timeline so the user sees content
+// immediately on reload — browsers block autoplay without a user gesture,
+// so a frame-0 Player rendering a cold-open fade-in shows nothing.
+const RESTORED_INITIAL_FRAME = 30
+
+export function CanvasStage({
+  brand,
+  brief,
+  onRoll,
+  source,
+  reloadKey,
+  restoring = false,
+  aiGenerated = false,
+}: Props) {
   const inputProps = React.useMemo(() => ({ brand, brief }), [brand, brief])
   const provider = useStorageProvider()
 
@@ -148,6 +169,7 @@ export function CanvasStage({ brand, brief, onRoll, source, reloadKey, restoring
               clickToPlay
               spaceKeyToPlayOrPause
               acknowledgeRemotionLicense
+              initialFrame={aiGenerated === 'restored' ? RESTORED_INITIAL_FRAME : 0}
             />
           )}
         </CompositionErrorBoundary>
