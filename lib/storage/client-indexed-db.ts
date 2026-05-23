@@ -18,6 +18,7 @@ import type {
   CompositionFactory,
   GenerateRequest,
   GenerateResult,
+  PeekResult,
   StorageProvider,
 } from './types'
 import { makeStorageError } from './types'
@@ -210,6 +211,21 @@ export class ClientIndexedDBProvider implements StorageProvider {
         )
       }
       return { default: Component }
+    }
+  }
+
+  async peekComposition(clipId: string): Promise<PeekResult> {
+    const db = await this.getDb()
+    const stored = await idbGet(db, clipId)
+    if (!stored) return { exists: false }
+    return {
+      exists: true,
+      meta: {
+        generatedAt: stored.generatedAt,
+        codeLength: stored.codeLength,
+        provider: stored.provider,
+        model: stored.model,
+      },
     }
   }
 

@@ -117,6 +117,45 @@ describe('storage: ServerFixedSessionProvider', () => {
     const factory = p.composition('demo-session')
     expect(typeof factory).toBe('function')
   })
+
+  it('peekComposition returns exists:false when the endpoint reports missing', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify({ exists: false }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const { ServerFixedSessionProvider } = await import('@/lib/storage/server-fixed-session')
+    const p = new ServerFixedSessionProvider()
+    const r = await p.peekComposition('demo-session')
+    expect(r).toEqual({ exists: false })
+    const [url] = fetchMock.mock.calls[0]!
+    expect(url).toBe('/api/clips/demo-session/exists')
+  })
+
+  it('peekComposition returns exists:true + meta when the endpoint reports a hit', async () => {
+    const meta = { generatedAt: '2026-05-23T12:00:00Z', codeLength: 1234, provider: 'openai', model: 'gpt-5.5' }
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify({ exists: true, meta }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const { ServerFixedSessionProvider } = await import('@/lib/storage/server-fixed-session')
+    const p = new ServerFixedSessionProvider()
+    const r = await p.peekComposition('demo-session')
+    expect(r).toEqual({ exists: true, meta })
+  })
+
+  it('peekComposition does not call ensureSession (no POST /api/clips)', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify({ exists: false }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const { ServerFixedSessionProvider } = await import('@/lib/storage/server-fixed-session')
+    const p = new ServerFixedSessionProvider()
+    await p.peekComposition('demo-session')
+    for (const [_url, init] of fetchMock.mock.calls) {
+      expect(init?.method ?? 'GET').toBe('GET')
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('storage: ClientIndexedDBProvider', () => {
@@ -147,5 +186,15 @@ describe('storage: ClientIndexedDBProvider', () => {
     const { ClientIndexedDBProvider } = await import('@/lib/storage/client-indexed-db')
     const p = new ClientIndexedDBProvider()
     expect(p.mode).toBe('client-indexed-db')
+  })
+
+  it('peekComposition rejects with STORAGE_INDEXEDDB_UNAVAILABLE when IndexedDB is missing', async () => {
+    // jsdom has no IndexedDB → getDb() rejects with this code → peek
+    // surfaces the same error rather than silently returning exists:false.
+    const { ClientIndexedDBProvider } = await import('@/lib/storage/client-indexed-db')
+    const p = new ClientIndexedDBProvider()
+    await expect(p.peekComposition('client-session')).rejects.toMatchObject({
+      code: 'STORAGE_INDEXEDDB_UNAVAILABLE',
+    })
   })
 })

@@ -20,6 +20,12 @@ interface Props {
   source: { kind: 'static' } | { kind: 'lazy'; clipId: string }
   /** Bumped by parent to force the Player to re-import on lazy source. */
   reloadKey: number
+  /**
+   * True while the parent is probing the storage provider for an existing
+   * composition on mount (v0.3 T26). Renders a skeleton so the user doesn't
+   * see a `default → restored` flash.
+   */
+  restoring?: boolean
 }
 
 class CompositionErrorBoundary extends React.Component<
@@ -60,7 +66,7 @@ class CompositionErrorBoundary extends React.Component<
   }
 }
 
-export function CanvasStage({ brand, brief, onRoll, source, reloadKey }: Props) {
+export function CanvasStage({ brand, brief, onRoll, source, reloadKey, restoring = false }: Props) {
   const inputProps = React.useMemo(() => ({ brand, brief }), [brand, brief])
   const provider = useStorageProvider()
 
@@ -91,8 +97,16 @@ export function CanvasStage({ brand, brief, onRoll, source, reloadKey }: Props) 
           boxShadow: 'var(--rk-shadow-stage)',
         }}
         data-testid="demo-player"
-        data-source={source.kind}
+        data-source={restoring ? 'restoring' : source.kind}
       >
+        {restoring ? (
+          <div
+            className="absolute inset-0 grid place-items-center bg-canvas font-mono text-[11px] text-text-lo"
+            data-testid="demo-player-skeleton"
+          >
+            <span className="animate-pulse">恢复上次的 AI 生成…</span>
+          </div>
+        ) : (
         <CompositionErrorBoundary
           key={playerKey}
           onReset={() => {
@@ -137,6 +151,7 @@ export function CanvasStage({ brand, brief, onRoll, source, reloadKey }: Props) 
             />
           )}
         </CompositionErrorBoundary>
+        )}
       </div>
 
       <RandomThemeButton brand={brand} brief={brief} onChange={onRoll} />

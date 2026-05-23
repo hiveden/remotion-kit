@@ -12,6 +12,7 @@ import type {
   CompositionFactory,
   GenerateRequest,
   GenerateResult,
+  PeekResult,
   StorageProvider,
 } from './types'
 import { makeStorageError } from './types'
@@ -92,6 +93,30 @@ export class ServerFixedSessionProvider implements StorageProvider {
         /* webpackInclude: /Composition\.tsx$/ */
         `@clip-workspace/${clipId}/src/Composition`
       )
+  }
+
+  async peekComposition(clipId: string, signal?: AbortSignal): Promise<PeekResult> {
+    const r = await fetch(`/api/clips/${clipId}/exists`, { signal })
+    if (!r.ok) {
+      throw makeStorageError(
+        `HTTP ${r.status}`,
+        `peek exists failed for ${clipId}`,
+      )
+    }
+    const data = (await r.json().catch(() => ({}))) as {
+      exists?: boolean
+      meta?: { generatedAt?: string; codeLength?: number; provider?: string; model?: string }
+    }
+    if (!data.exists || !data.meta) return { exists: false }
+    return {
+      exists: true,
+      meta: {
+        generatedAt: data.meta.generatedAt ?? '',
+        codeLength: data.meta.codeLength ?? 0,
+        provider: data.meta.provider ?? 'unknown',
+        model: data.meta.model ?? 'unknown',
+      },
+    }
   }
 
   async reset(): Promise<void> {

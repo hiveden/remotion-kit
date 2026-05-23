@@ -5,9 +5,15 @@ import type { DemoBrandState, DemoBrief } from '@/lib/demo/types'
 import type { AgentDockHandle } from './AgentChatDock'
 import { categorize } from './AgentChatDock'
 import { useStorageProvider } from '@/lib/storage/use-storage-provider'
-import { isStorageError } from '@/lib/storage/types'
+import { isStorageError, type PeekMeta } from '@/lib/storage/types'
 
 export type CompositionSource = { kind: 'static' } | { kind: 'lazy'; clipId: string }
+
+/**
+ * `fresh` — user just submitted; `restored` — auto-recovered from provider
+ * peek on mount (v0.3 T26). UI uses this to distinguish first-load chip text.
+ */
+export type AiGeneratedKind = false | 'fresh' | 'restored'
 
 const DEMO_DURATION_SECONDS = 14
 
@@ -26,16 +32,29 @@ interface State {
   source: CompositionSource
   reloadKey: number
   snapshot: Snapshot | null
-  aiGenerated: boolean
+  aiGenerated: AiGeneratedKind
+  restoring: boolean
+  restoredMeta: PeekMeta | null
 }
 
 export interface UseAgentGenerate {
   source: CompositionSource
   reloadKey: number
-  aiGenerated: boolean
+  aiGenerated: AiGeneratedKind
+  restoring: boolean
+  restoredMeta: PeekMeta | null
   submit: (prompt: string) => Promise<void>
   cancel: () => void
   undo: () => void
+}
+
+/**
+ * Mirror the per-provider session clip id naming. Kept in this hook so the
+ * StorageProvider interface doesn't have to expose its session key.
+ */
+function getSessionClipId(mode: 'server-fixed-session' | 'client-indexed-db' | 'server-ephemeral'): string {
+  if (mode === 'client-indexed-db') return 'client-session'
+  return 'demo-session'
 }
 
 function buildScenePrompt(prompt: string, brand: DemoBrandState, brief: DemoBrief): string {
@@ -66,12 +85,73 @@ export function useAgentGenerate({
     reloadKey: 0,
     snapshot: null,
     aiGenerated: false,
+    restoring: false,
+    restoredMeta: null,
   })
   const abortRef = React.useRef<AbortController | null>(null)
   const latestRef = React.useRef({ brand, brief })
   React.useEffect(() => {
     latestRef.current = { brand, brief }
   }, [brand, brief])
+
+  // v0.3 T26: when the provider resolves on first mount, probe for an
+  // existing composition and auto-restore source=lazy if one is found. The
+  // peek is lightweight (IDB row meta or HEAD-ish exists endpoint) — it
+  // never loads the full tsx or triggers ensureSession side effects.
+  // We don't bump reloadKey here: the initial mount isn't a "reload" from
+  // the Player's perspective, and bumping forced an extra remount race
+  // (Block 6 lesson).
+  const peekStartedRef = React.useRef(false)
+  React.useEffect(() => {
+    if (!provider) return
+    if (peekStartedRef.current) return
+    peekStartedRef.current = true
+    setState((s) => ({ ...s, restoring: true }))
+    const ac = new AbortController()
+    let alive = true
+    provider.peekComposition(getSessionClipId(provider.mode), ac.signal).then(
+      (result) => {
+        if (!alive) return
+        if (result.exists) {
+          const clipId = getSessionClipId(provider.mode)
+          setState((s) => ({
+            ...s,
+            source: { kind: 'lazy', clipId },
+            // snapshot the static default so `undo()` can restore it without
+            // touching the persisted entry.
+            snapshot: { source: { kind: 'static' } },
+            aiGenerated: 'restored',
+            restoring: false,
+            restoredMeta: result.meta,
+          }))
+        } else {
+          setState((s) => ({ ...s, restoring: false }))
+        }
+      },
+      (e: unknown) => {
+        if (!alive) return
+        setState((s) => ({ ...s, restoring: false }))
+        // PM red-line: never silently fall back. Surface the failure so the
+        // user sees something happened, without breaking the static default.
+        const dock = dockRef.current
+        if (!dock) return
+        if (isStorageError(e)) {
+          dock.reportError({ category: categorize(e.code), code: e.code, message: e.message })
+        } else {
+          const err = e as { message?: string }
+          dock.reportError({
+            category: 'SYSTEM',
+            code: 'STORAGE_PEEK_FAILED',
+            message: err.message ?? 'restore probe failed',
+          })
+        }
+      },
+    )
+    return () => {
+      alive = false
+      ac.abort()
+    }
+  }, [provider, dockRef])
 
   async function submit(promptText: string) {
     const dock = dockRef.current
@@ -107,7 +187,11 @@ export function useAgentGenerate({
         source: { kind: 'lazy', clipId },
         reloadKey: s.reloadKey + 1,
         snapshot,
-        aiGenerated: true,
+        aiGenerated: 'fresh',
+        restoring: false,
+        // A fresh submit supersedes the restored entry's meta; clear it so
+        // the chip stops saying "restored from {mode}".
+        restoredMeta: null,
       }))
       dock.reportDone(elapsed, isMock)
       onGenerated()
@@ -142,6 +226,8 @@ export function useAgentGenerate({
         reloadKey: s.reloadKey + 1,
         snapshot: null,
         aiGenerated: false,
+        restoring: false,
+        restoredMeta: null,
       }
     })
   }
@@ -150,6 +236,8 @@ export function useAgentGenerate({
     source: state.source,
     reloadKey: state.reloadKey,
     aiGenerated: state.aiGenerated,
+    restoring: state.restoring,
+    restoredMeta: state.restoredMeta,
     submit,
     cancel,
     undo,

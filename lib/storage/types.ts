@@ -56,6 +56,20 @@ export type CompositionFactory = () => Promise<{
   default: React.ComponentType<Record<string, unknown>>
 }>
 
+/**
+ * Lightweight metadata about a stored composition. Returned by `peekComposition`
+ * so the UI can render restoration affordances (timestamp / source chip) without
+ * loading the full tsx + running the bundler.
+ */
+export interface PeekMeta {
+  generatedAt: string
+  codeLength: number
+  provider: string
+  model: string
+}
+
+export type PeekResult = { exists: false } | { exists: true; meta: PeekMeta }
+
 export interface StorageProvider {
   readonly mode: StorageMode
 
@@ -78,6 +92,17 @@ export interface StorageProvider {
    * The factory itself is sync; the import inside is async.
    */
   composition(clipId: string): CompositionFactory
+
+  /**
+   * Lightweight existence probe. Returns whether a composition is already
+   * persisted for the given clipId without loading or evaluating it. Used by
+   * the UI to restore "AI generated" state after a page reload (v0.3 T26).
+   *
+   * Providers MUST NOT trigger ensureSession side effects or load full tsx
+   * here. ClientIndexedDB reads only the meta fields from the IDB row;
+   * ServerFixedSession hits a dedicated lightweight `/exists` endpoint.
+   */
+  peekComposition(clipId: string, signal?: AbortSignal): Promise<PeekResult>
 
   /**
    * Wipe the active session. Used for "back to factory" UX, not wired to

@@ -11,6 +11,7 @@ import { CanvasStage } from './CanvasStage'
 import { RightSidebar } from './RightSidebar'
 import { BottomTimeline } from './BottomTimeline'
 import { useAgentGenerate } from './useAgentGenerate'
+import { getStorageMode } from '@/lib/storage'
 import { ChevronLeft, ChevronRight } from './icons'
 import type { AgentDockHandle } from './AgentChatDock'
 
@@ -31,6 +32,10 @@ export function DemoApp() {
     dockRef,
     onGenerated: () => setLayout('L0'),
   })
+  // Storage mode is fixed per page-load (URL ?storage=... or env). Read it
+  // once for the topbar chip to display "restored from {mode}". Falls back
+  // to the default mode on the server during SSR.
+  const storageMode = React.useMemo(() => getStorageMode(), [])
 
   function jumpToScope(scope: 'cover' | 'body' | 'cta') {
     setLayout('L1')
@@ -58,6 +63,7 @@ export function DemoApp() {
         <TopBar
           templateLabel="brief 系列"
           aiGenerated={agent.aiGenerated}
+          restoredFromMode={agent.aiGenerated === 'restored' ? storageMode : null}
           onUndo={agent.undo}
         />
         <main
@@ -79,6 +85,7 @@ export function DemoApp() {
             }}
             source={agent.source}
             reloadKey={agent.reloadKey}
+            restoring={agent.restoring}
           />
           <RightSidebar
             layout={layout}

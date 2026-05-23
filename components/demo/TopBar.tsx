@@ -3,16 +3,26 @@
 import React from 'react'
 import { Sun, Moon, GitHubMark } from './icons'
 import { useTheme } from './ThemeProvider'
+import type { StorageMode } from '@/lib/storage/types'
+import type { AiGeneratedKind } from './useAgentGenerate'
 
 interface Props {
   templateLabel: string
-  aiGenerated: boolean
+  aiGenerated: AiGeneratedKind
+  /** When set, the chip explains the LLM output was restored from this mode. */
+  restoredFromMode?: StorageMode | null
   onUndo: () => void
 }
 
 const REPO_URL = 'https://github.com/hiveden/remotion-kit'
 
-export function TopBar({ templateLabel, aiGenerated, onUndo }: Props) {
+const MODE_LABEL: Record<StorageMode, string> = {
+  'server-fixed-session': 'server',
+  'client-indexed-db': 'browser',
+  'server-ephemeral': 'server',
+}
+
+export function TopBar({ templateLabel, aiGenerated, restoredFromMode, onUndo }: Props) {
   const { theme, toggle } = useTheme()
   return (
     <header
@@ -40,17 +50,22 @@ export function TopBar({ templateLabel, aiGenerated, onUndo }: Props) {
           <span
             className="flex h-7 items-center gap-1.5 rounded-full border border-[color:rgba(168,85,247,0.35)] bg-[color:rgba(168,85,247,0.12)] pl-3 pr-1 font-mono text-[11px] text-primary"
             data-testid="topbar-ai-generated-chip"
+            data-state={aiGenerated}
           >
-            ✨ AI generated
+            {aiGenerated === 'restored' && restoredFromMode ? (
+              <>✨ AI generated (restored from {MODE_LABEL[restoredFromMode]})</>
+            ) : (
+              <>✨ AI generated</>
+            )}
             <button
               type="button"
               onClick={onUndo}
               className="rounded-full px-2 py-0.5 text-text-md transition-colors hover:bg-[color:rgba(168,85,247,0.18)] hover:text-text-hi"
               data-testid="topbar-ai-undo"
               aria-label="撤销 AI 生成"
-              title="撤销回调参前的版本"
+              title={aiGenerated === 'restored' ? '回到默认模板（保留浏览器记录）' : '撤销回调参前的版本'}
             >
-              ↩ 撤销
+              ↩ {aiGenerated === 'restored' ? '重置' : '撤销'}
             </button>
           </span>
         )}
