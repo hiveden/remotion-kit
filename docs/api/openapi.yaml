@@ -187,6 +187,67 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
 
+  /api/clips/{id}/exists:
+    parameters:
+      - $ref: '#/components/parameters/ClipId'
+    get:
+      tags: [clips]
+      summary: Lightweight existence probe (peek)
+      description: |
+        Used by StorageProvider.peekComposition() (T26) to decide on mount
+        whether the client should restore a previously-generated Composition.tsx
+        without performing any heavy reads.
+
+        Semantics:
+        - `exists: true`  ⇔ `.meta/last-generate.json` exists AND its `errorCode === null`
+          (i.e. there is a successful LLM-generated Composition)
+        - `exists: false` ⇔ no record file, malformed record, or the latest take
+          recorded an error code
+
+        Side-effect free: does NOT create the clip directory, does NOT trigger
+        ensureSession, does NOT read the full Composition.tsx.
+      responses:
+        '200':
+          description: Probe result (regardless of existence)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [exists]
+                properties:
+                  exists:
+                    type: boolean
+                  meta:
+                    type: object
+                    description: Present only when `exists: true`. Fields may be null when the persisted record lacked them.
+                    properties:
+                      generatedAt:
+                        oneOf:
+                          - { type: string, format: date-time }
+                          - { type: 'null' }
+                      codeLength:
+                        oneOf:
+                          - { type: integer }
+                          - { type: 'null' }
+                      provider:
+                        oneOf:
+                          - { type: string }
+                          - { type: 'null' }
+                      model:
+                        oneOf:
+                          - { type: string }
+                          - { type: 'null' }
+        '400':
+          description: Invalid clip id
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '500':
+          description: Filesystem read error (non-ENOENT)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   /api/llm/raw:
     post:
       tags: [generate]
